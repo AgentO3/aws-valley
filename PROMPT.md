@@ -72,7 +72,26 @@ After Part 1 and Part 2, do the first item in this list that has the status `ope
 
 <!-- health-check-items: start -->
 
-No items yet.
+### HC-1: Fix the 9 Playwright failures that keep main red
+
+- Status: open
+- Added: 2026-10-17
+- Problem: CI run 38996622182 on `main` (commit a856fb2) failed. The step "Smoke test the built site" ran 10.5 minutes. 9 tests failed after 2 retries, and 39 passed. The failed tests are in `tests/smoke.spec.js` (lines 15 and 47), `tests/view.spec.js` (S1, S4, S5, S6, R7), `tests/view-button.spec.js` (S2) and `tests/view-url.spec.js` (S3). The last one stops in `Place.open` at `tests/place.js:38`. The jobs "Deploy to GitHub Pages" and "Smoke test the live site" were skipped, so the site has no deploy. The report is in the artifact of that run: https://github.com/AgentO3/aws-valley/actions/runs/38996622182
+- Done when: `gh run list --branch main --limit 1 --json conclusion` shows `success`, and the jobs "Build and smoke test", "Deploy to GitHub Pages" and "Smoke test the live site" all show `success`.
+
+### HC-2: Add Subresource Integrity to the CDN scripts
+
+- Status: open
+- Added: 2026-10-17
+- Problem: `_layouts/place.html` line 12 loads A-Frame from `aframe.io`. Line 13 loads `meshopt_decoder.js` from jsDelivr. Neither tag has an `integrity` or `crossorigin` attribute. A changed CDN file runs in every place with no check.
+- Done when: a Playwright or build test reads every `<script src="https://...">` in `_site/index.html` and `_site/moon/moon-base/index.html`, and it fails if a tag has no `integrity` attribute. `npm test` passes.
+
+### HC-3: Add the BDR files that the code and tests name
+
+- Status: open
+- Added: 2026-10-17
+- Problem: `tests/*.spec.js` and `docs/adr/002-pack-structure.md` (lines 56, 192, 197) cite BDR-001 to BDR-012. The repository has no BDR file. `git ls-files | grep -i bdr` finds only `docs/specs/practices/bdr.md`. Rules 1 and 18 of that spec need a `docs/bdr/` folder and an index. The acceptance criteria are not in the repository, so a reader cannot check which test covers which criterion.
+- Done when: `docs/bdr/README.md` lists BDR-001 to BDR-012 with a status. Each BDR file has a `## Status` section. A test or script checks that each `BDR-NNN` in `tests/` and `docs/` has a file in `docs/bdr/`. `README.md` names the folder.
 
 <!-- health-check-items: end -->
 
