@@ -1,0 +1,36 @@
+---
+title: Not found
+permalink: /404.html
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ page.title }} · {{ site.title }}</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #1a120c;
+        color: #f2e2c8;
+        font:
+          16px/1.5 system-ui,
+          sans-serif;
+        display: grid;
+        place-items: center;
+      }
+      a {
+        color: #ffc27e;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>This place does not exist.</h1>
+      <p><a href="{{ '/' | relative_url }}">Go back to the valley</a></p>
+    </main>
+  </body>
+</html>

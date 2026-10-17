@@ -1,0 +1,75 @@
+<!doctype html>
+{%- comment -%}
+  One layout renders every place. _plugins/packs.rb collects the place data (page.place),
+  and Liquid only writes it as JSON. assets/js/engine.js builds the 3D scene from that data.
+{%- endcomment -%}
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ page.title }} · {{ site.title }}</title>
+  <link rel="icon" href="data:,">
+  <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/meshoptimizer@0.22.0/meshopt_decoder.js"></script>
+  <script>
+    // Let three.js addon modules import 'three' and receive the copy of three.js inside A-Frame.
+    (function () {
+      var names = Object.keys(THREE).filter(function (k) { return /^[A-Za-z_$][\w$]*$/.test(k); });
+      var code = 'const T = window.THREE; export const {' + names.join(',') + '} = T; export default T;';
+      var map = document.createElement('script');
+      map.type = 'importmap';
+      map.textContent = JSON.stringify({ imports: {
+        'three': URL.createObjectURL(new Blob([code], { type: 'text/javascript' })),
+        'three/addons/': 'https://cdn.jsdelivr.net/npm/three@0.173.0/examples/jsm/',
+        'cozy/': {{ '/assets/js/' | relative_url | jsonify }}
+      } });
+      document.currentScript.after(map);
+    })();
+  </script>
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; }
+    #fade { position: fixed; inset: 0; background: #000; opacity: 1; pointer-events: none;
+            transition: opacity .4s ease; z-index: 10; }
+    #fade.clear { opacity: 0; }
+    #hud { position: fixed; left: 12px; bottom: 12px; z-index: 11; color: #fff;
+           font: 14px/1.4 system-ui, sans-serif; text-shadow: 0 1px 2px #000; }
+    #say { position: fixed; left: 50%; top: 18px; transform: translateX(-50%); z-index: 11; color: #fff;
+           font: 16px/1.4 system-ui, sans-serif; background: rgba(20, 12, 6, .7); padding: 6px 14px;
+           border-radius: 6px; }
+    #say:empty { display: none; }
+    #controls { position: fixed; right: 12px; top: 12px; z-index: 11; display: flex; gap: 8px; }
+    #controls button { font: 14px/1.4 system-ui, sans-serif; color: #f2e2c8; background: #5a3b22;
+                       border: 1px solid #f2e2c8; border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div id="fade"></div>
+  {%- assign view_switch = site.view_switch | default: "key" %}
+  <div id="hud">{{ page.title }} · WASD to move · click to look{% if view_switch == "key" or view_switch == "key-and-button" %} · V to switch view{% endif %}</div>
+  <div id="say" role="status" aria-live="polite"></div>
+  <div id="controls">
+    <div id="actions"></div>
+    {%- if view_switch == "key-and-button" %}
+    <button id="view-btn" type="button" aria-pressed="false">Third person view</button>
+    {%- endif %}
+  </div>
+
+  <a-scene renderer="antialias: true; toneMapping: ACESFilmic" vr-mode-ui="enabled: true">
+    <a-entity id="world"></a-entity>
+    <a-entity id="rig">
+      <a-camera id="cam" position="0 1.6 0"
+                wasd-controls="acceleration: 45"
+                look-controls="pointerLockEnabled: true"></a-camera>
+    </a-entity>
+  </a-scene>
+
+  <script>
+    window.PLACE = Object.assign({{ page.place | jsonify }}, {
+      text: {{ content | strip_html | normalize_whitespace | jsonify }},
+      viewSwitch: {{ view_switch | jsonify }}
+    });
+  </script>
+  <script type="module" src="{{ '/assets/js/engine.js' | relative_url }}"></script>
+  <script type="module" src="{{ '/assets/js/bloom.js' | relative_url }}"></script>
+</body>
+</html>
