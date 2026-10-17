@@ -29,13 +29,15 @@ test('S1: the V key switches to third person, and the avatar is in front of the 
 
   // AC-2: the camera stays behind the avatar when the visitor moves.
   // wasd-controls skips a frame longer than 0.2 s, and headless SwiftShader frames take about 0.4 s.
-  // Thus the test holds W and steps wasd-controls 12 times at 16 ms, then waits two frames for the view.
+  // Thus the test holds W and steps wasd-controls 12 times at 16 ms. After the key goes up, the test stops
+  // the velocity that is left, so the camera does not drift. Then it waits two frames for the view.
   await page.keyboard.down('KeyW');
   await page.evaluate(() => {
     const wasd = document.querySelector('a-camera').components['wasd-controls'];
     for (let i = 0; i < 12; i++) wasd.tick(0, 16);
   });
   await page.keyboard.up('KeyW');
+  await page.evaluate(() => document.querySelector('a-camera').components['wasd-controls'].velocity.set(0, 0, 0));
   await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
   const after = await place.avatar();
   expect(after.inView).toBe(true);
