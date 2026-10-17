@@ -1,0 +1,110 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build and smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: ruby/setup-ruby@651ff0d62c5c79bed6d53ec518387aae20e72c1a # v1.329.0
+        with:
+          bundler-cache: true
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint and format check
+        run: |
+          npm run lint
+          npm run format:check
+
+      - id: pages
+        uses: actions/configure-pages@v6
+
+      # Build once. The smoke tests and the deploy use this same _site/ (delivery/static-hosting rules 1–2).
+      - name: Build
+        env:
+          BASE_PATH: ${{ steps.pages.outputs.base_path }}
+        run: bundle exec jekyll build --strict_front_matter --baseurl "$BASE_PATH"
+
+      - run: npx playwright install --with-deps chromium
+
+      - name: Smoke test the built site
+        env:
+          SITE_BASE: ${{ steps.pages.outputs.base_path }}
+        run: npx playwright test
+
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-report-${{ github.sha }}
+          path: playwright-report/
+          retention-days: 14
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site/
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    outputs:
+      page_url: ${{ steps.deploy.outputs.page_url }}
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v5
+
+  verify:
+    name: Smoke test the live site
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      # delivery/static-hosting rule 13: run the same smoke tests against the live URL after each deploy.
+      - name: Smoke test
+        env:
+          LIVE_URL: ${{ needs.deploy.outputs.page_url }}
+        run: npx playwright test
