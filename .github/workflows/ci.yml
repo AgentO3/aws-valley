@@ -49,6 +49,12 @@ jobs:
           BASE_PATH: ${{ steps.pages.outputs.base_path }}
         run: bundle exec jekyll build --strict_front_matter --baseurl "$BASE_PATH"
 
+      # The fixture, button and url projects of playwright.config.js test these builds. CI does not deploy them.
+      - name: Build the test fixtures
+        env:
+          BASE_PATH: ${{ steps.pages.outputs.base_path }}
+        run: npm run build:fixtures -- --baseurl "$BASE_PATH"
+
       - run: npx playwright install --with-deps chromium
 
       - name: Smoke test the built site
