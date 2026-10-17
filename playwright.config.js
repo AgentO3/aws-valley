@@ -24,6 +24,8 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   // Headless SwiftShader is CPU bound. More than 2 workers starve the scenes, and the model loads time out.
   workers: 2,
+  // The root place loads in about 25 s on a GitHub runner, so 30 s per test is too short.
+  timeout: 60_000,
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: { trace: 'on-first-retry' },
   projects: SITES.map((site) => ({

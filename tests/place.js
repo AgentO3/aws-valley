@@ -40,18 +40,20 @@ export class Place {
   }
 
   // The scene is ready when the engine exposes its debug object and all models have loaded.
-  // Then the helper turns off the shadows and the bloom. Headless SwiftShader spends more than half of each
-  // frame on the two shadow maps, and on a CI runner a frame can block the page for many seconds.
-  // The tests do not compare pixels, so this does not change what they check.
+  // Then the helper turns off the shadows and the bloom, and hides the instanced scenery. Headless
+  // SwiftShader draws on the CPU. The root place has about 1.3 million instanced triangles, and on a CI
+  // runner one frame can block the page for many seconds. Locally a root frame goes from 400 ms to 33 ms.
+  // The tests do not compare pixels, and doors and exits are not instanced, so the checks do not change.
   async ready() {
     await expect
-      .poll(() => this.page.evaluate(() => window.__placeDebug?.pending() ?? -1), { timeout: 30_000 })
+      .poll(() => this.page.evaluate(() => window.__placeDebug?.pending() ?? -1), { timeout: 45_000 })
       .toBe(0);
     await this.page.evaluate(() => {
       const scene = document.querySelector('a-scene');
       scene.renderer.shadowMap.enabled = false;
       scene.object3D.traverse((o) => {
         if (o.isLight) o.castShadow = false;
+        if (o.isInstancedMesh) o.visible = false;
       });
       if (window.__bloom) window.__bloom.enabled = false;
     });
