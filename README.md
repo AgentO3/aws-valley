@@ -1,6 +1,6 @@
 # AWS Valley
 
-A walkable 3D world. Each Markdown page in `_places/` is one place. Walk through doors and portals between places, on desktop or in VR.
+A walkable 3D world. Each folder in `packs/` that contains `index.md` is one place. Walk through doors and portals between places, on desktop or in VR.
 
 This project uses the `cozy-engine` stack from `stackable-specs`.
 
@@ -25,15 +25,15 @@ npx playwright install chromium
 | --- | --- |
 | `npm run serve` | Runs the site at http://127.0.0.1:4000/ with live reload |
 | `npm run build` | Builds `_site/` with strict front matter and strict Liquid |
-| `npm test` | Builds the site, then runs the Playwright smoke tests on `_site/` |
+| `npm test` | Builds `_site/` and the three fixture builds, then runs the Playwright tests on them |
 | `npm run lint` | Runs ESLint |
 | `npm run format:check` | Checks the format with Prettier |
 | `scripts/optimize-model.sh <in> <out>` | Optimizes one model and checks the 300 KB budget |
 
 ## Add a place
 
-1. Add a file `_places/<slug>.md`.
-2. Set `title` and `parent`. See [ADR-001](docs/adr/001-place-model.md) for all keys.
+1. Add a folder `packs/<path>/<slug>/` with an `index.md`. The containing folder is the parent, and the folder path is the URL.
+2. Set `title` in the front matter. Optional: add `exterior.js`, `interior.js`, `rules.js`, a `models/` folder and `CREDITS.md`. See [ADR-002](docs/adr/002-pack-structure.md) for all files and keys.
 3. Run `npm test`. The smoke tests find the new place automatically.
 
 ## Deploy

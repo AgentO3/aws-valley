@@ -1,8 +1,8 @@
 # stack-cozy-engine
 
-A base stack for a content-driven walkable 3D world. Each Markdown page is one place. A visitor walks between places through doors and portals, on desktop or in VR.
+A base stack for a content-driven walkable 3D world. Each pack folder is one place. A visitor walks between places through doors and portals, on desktop or in VR.
 
-The reference implementation is `aws-valley`. A new version of this stack keeps the architecture below. The theme, the models, the moods and the place types can change.
+The reference implementation is `aws-valley`. A new version of this stack keeps the architecture below. The theme, the models, the moods and the pack code can change.
 
 ## Spec set
 
@@ -20,54 +20,66 @@ The reference implementation is `aws-valley`. A new version of this stack keeps 
 
 ## Architecture contract
 
+[ADR-002](adr/002-pack-structure.md) gives the full pack structure.
+
 ### 1. Data flow
 
 ```
-_places/*.md  ──Liquid (data only)──▶  window.PLACE (JSON)  ──engine.js──▶  A-Frame scene
+packs/**/index.md  ──_plugins/packs.rb──▶  page.place  ──Liquid jsonify──▶  window.PLACE (JSON)  ──engine.js──▶  A-Frame scene
+                                                                                                    └─import()──▶  pack modules
 ```
 
-- Liquid collects the page, its parent and its children. Liquid writes them as one JSON object with `jsonify`.
-- `assets/js/engine.js` reads `window.PLACE` and builds all entities. Liquid does not write entity markup.
-- One layout (`_layouts/place.html`) renders every place, and also the root page `index.md`.
+- `_plugins/packs.rb` walks `packs/`. It makes one page for each pack, copies the pack files under the place URL, and sets `page.place`.
+- The layout writes `page.place` as one JSON object with `jsonify`. Liquid does not write entity markup.
+- `assets/js/engine.js` is an ES module. It reads `window.PLACE`, builds the core entities, and loads the pack modules with `import()`.
+- One layout (`_layouts/place.html`) renders every place, and also the root place `packs/index.md`.
 
 ### 2. Place graph
 
-- The root page (`index.md`) has the ID `index`.
-- Each file in the `places` collection is one place. Its ID is the file slug.
-- `parent` makes a tree. A place shows a door or a portal for each child and one exit to its parent.
-- An unknown `parent` gives `{ missing: "<slug>" }`. The engine logs a `[place]` warning, and the place has no exit.
+- A pack is a folder under `packs/` that contains `index.md`. A subfolder with no `index.md` is an asset folder of its pack.
+- The URL is the folder path. `packs/` is the root place `/`, and `packs/moon/moon-base/` is `/moon/moon-base/`.
+- The parent is the folder that contains the pack. A place shows a door or a portal for each child pack and one exit to its parent.
+- A pack folder name contains only `a-z`, `0-9` and `-`. The names `models`, `textures`, `sounds` and `lib` are reserved. A bad name stops the build.
 
-### 3. Front matter keys
+### 3. Pack files and front matter keys
+
+| File | Purpose | If the file does not exist |
+| --- | --- | --- |
+| `index.md` | Title, settings and sign text | The folder is not a place |
+| `exterior.js` | The door or structure that the parent shows for this pack | A plain door frame |
+| `interior.js` | The scene inside this place | An empty room |
+| `rules.js` | The game rules and logic of this place | No extra rules |
+| `CREDITS.md` | The licenses of the assets in this folder | Required if the folder has assets |
 
 | Key | Type | Required | Default | Meaning |
 | --- | --- | --- | --- | --- |
-| `title` | string | yes | — | The name on the door and in the HUD |
-| `type` | `world` \| `house` \| `cave` | no | `world` | The prefab outside, and the interior inside |
-| `parent` | slug \| `index` | yes, except on root | — | The place that contains this place |
-| `mood` | key of `MOODS` | no | from `type` | Sky, light, fog and exposure |
-| `biome` | string | no | — | The decoration set for a `world` |
-| `position` | `[x, y, z]` | no | arc layout | A fixed position in the parent, in metres. The engine ignores `y`, because structures stand on the ground |
+| `title` | string | yes | — | The name on the door and in the HUD. A missing title stops the build |
+| `mood` | `golden` \| `moonlight` \| `hearth` \| `grotto` \| object | no | `golden` | Sky, light, fog and exposure. An object sets its own values over `golden` |
+| `position` | `[x, y, z]` | no | arc layout | A fixed position in the parent, in metres. The engine ignores `y` |
+| `size` | `{ ring, walk_limit, exit }` | no | ring `max(14, 4 × children)`, walk limit ring + 12, exit 9 | The child ring radius, the walk limit and the exit distance, in metres |
 
-The Markdown body becomes the text on the sign in the place.
+The Markdown body becomes the text on the sign in the place. The keys `type`, `biome` and `parent` are removed. The build ignores them and writes a warning.
 
 ### 4. `window.PLACE` shape
 
 ```js
 {
-  id, type, title, text, mood, biome,
-  parent: { id, title, mood, url } | { missing } | null,
-  children: [{ id, title, type, url, position, mood }]
+  id, title, url, base, mood, position, size, text, viewSwitch,
+  files: ['exterior.js' | 'interior.js' | 'rules.js'],
+  parent: { id, title, url, mood } | null,
+  children: [{ id, title, url, base, mood, position, files }]
 }
 ```
 
+`files` lists only the pack modules that exist. Thus an optional module that does not exist causes no failed request.
+
 ### 5. Engine extension points
 
-A new version changes these tables. It does not change the core loop.
+A new place is a new pack folder. It does not change the core loop.
 
-- `KINDS` — the size of each place type: child ring radius, walk limit, exit distance.
-- `MOODS` — the light and air for each mood.
-- `PREFABS` — the structure for each child type. Each prefab faces +Z and has its door on the +Z side.
-- Biome decoration — the models to scatter for each biome.
+- `exterior.js`, `interior.js` and `rules.js` — the pack modules. Each module gets one `ctx` object with `root`, `model()`, `rng`, `store`, `say()` and `place`.
+- `MOODS` in `engine.js` — the named presets for the light and air. A pack can set a mood object, so a new mood needs no engine change.
+- A pack error logs `[pack <id>] <phase>: <message>`. The doors, the exit and the fade still work.
 
 ### 6. Navigation
 
@@ -94,19 +106,18 @@ On 2026-10-15, `aws-valley` closed the gaps that this section listed before:
 - The project is a git repository. `.github/workflows/ci.yml` builds, tests, deploys to GitHub Pages, and tests the live site.
 - `tests/smoke.spec.js` holds the Playwright smoke tests.
 - `scripts/optimize-model.sh` pins `@gltf-transform/cli` 4.5.1. The version for the older models is not known, and `CREDITS.md` says so.
-- [ADR-001](adr/001-place-model.md) lists the front matter keys.
+- [ADR-002](adr/002-pack-structure.md) lists the pack files and the front matter keys.
+- `engine.js` is an ES module.
 
 These spec rules are still open:
 
-- `language/javascript`: `engine.js` is an IIFE script, not an ES module. It also uses string concatenation and `Object.assign({}, ...)`.
+- `language/javascript`: `engine.js` uses string concatenation and `Object.assign({}, ...)`.
 - `practices/git`: signed commits, branch protection and a hook manager need forge and contributor setup.
 
 ## Headless test note
 
-Headless Chromium uses SwiftShader. With bloom on, screenshots can be almost all black, but a hardware GPU renders them correctly. For headless visual checks, set `window.__bloom.enabled = false` first.
+Headless Chromium uses SwiftShader. The scenes render at about 2 frames per second, so the tests use 2 workers. With bloom on, screenshots can be almost all black, but a hardware GPU renders them correctly. For headless visual checks, set `window.__bloom.enabled = false` first.
 
 ## Next steps (not in this scaffold)
 
-- ADRs: the choice of A-Frame over raw three.js, and Jekyll over a JS generator.
-- BDRs: "walk through a door", "return through an exit", "enter VR".
-- A front matter schema and a verify script for `_places/*.md`.
+- A front matter schema and a verify script for `packs/**/index.md`.

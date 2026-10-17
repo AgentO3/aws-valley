@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Superseded by [ADR-002](002-pack-structure.md) on 2026-10-16.
 
 ## Context and Problem Statement
 
