@@ -1,0 +1,21 @@
+{
+  "name": "aws-valley",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bundle exec jekyll build --strict_front_matter",
+    "serve": "bundle exec jekyll serve --livereload --destination _site-dev",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "npm run build && npm run build:fixtures && playwright test",
+    "build:fixtures": "node scripts/build-fixtures.js"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.64.0",
+    "eslint": "10.12.0",
+    "globals": "17.13.0",
+    "prettier": "3.9.9"
+  }
+}

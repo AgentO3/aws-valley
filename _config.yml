@@ -1,0 +1,38 @@
+title: AWS Valley
+description: A walkable world. Each page is a place.
+
+# How the visitor switches between first and third person (stack ADR-013): key, key-and-button or url.
+view_switch: key
+
+# Each folder in packs/ with an index.md is one place (stack ADR-001). _plugins/packs.rb makes the pages
+# and copies the pack files, so the normal Jekyll reader skips packs/ (see exclude).
+packs_dir: packs
+
+# An unknown filter or a Liquid syntax error stops the build (platform/jekyll rule 3).
+liquid:
+  error_mode: strict
+  strict_filters: true
+
+exclude:
+  - packs
+  - README.md
+  - .sdlc
+  - docs
+  - tests
+  - scripts
+  - node_modules
+  - vendor
+  - Gemfile
+  - Gemfile.lock
+  - package.json
+  - package-lock.json
+  - playwright.config.js
+  - eslint.config.js
+  - .prettierrc.json
+  - .prettierignore
+  - _site-dev
+  - _site-fixture
+  - _site-button
+  - _site-url
+  - test-results
+  - playwright-report

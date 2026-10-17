@@ -1,0 +1,30 @@
+# Dependencies
+node_modules
+vendor
+.bundle
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Editor / OS
+.DS_Store
+*.local
+
+# Jekyll
+_site
+_site-dev
+_site-fixture
+_site-button
+_site-url
+.jekyll-cache
+.jekyll-metadata
+
+# Playwright
+test-results
+playwright-report
+blob-report
+
+# 3D source packs (practices/3d-asset-pipeline rule 11)
+assets/source

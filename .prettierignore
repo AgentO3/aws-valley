@@ -1,0 +1,14 @@
+_site
+_site-dev
+.jekyll-cache
+node_modules
+vendor
+test-results
+playwright-report
+.sdlc
+docs/specs
+_layouts
+*.md
+_site-fixture
+_site-button
+_site-url
