@@ -1,0 +1,69 @@
+# Agent prompt: board items and red team
+
+This file is the prompt for a scheduled cloud agent. The agent runs every 2 hours on this repository (`AgentO3/aws-valley`). Each run starts with no context. Read all of this file before you do work.
+
+## Context
+
+- `aws-valley` is a walkable 3D world. Jekyll builds the site, and A-Frame renders each place. See `README.md` and `docs/architecture.md`.
+- Each folder in `packs/` with an `index.md` is one place. `_plugins/packs.rb` makes the pages. See `docs/adr/002-pack-structure.md`.
+- CI is `.github/workflows/ci.yml`. A push to `main` builds, tests, deploys to GitHub Pages, and tests the live site.
+- The live site is https://agento3.github.io/aws-valley/.
+- Headless Chromium uses SwiftShader and renders at about 2 frames per second. `playwright.config.js` sets `workers: 2` for this reason. Do not remove it.
+- Local setup: Ruby 3.3.4 (`.ruby-version`), Node.js 24, `bundle install`, `npm ci`, `npx playwright install --with-deps chromium`. If the sandbox cannot install Ruby 3.3.4, use the CI result of your pull request as the test result.
+
+## Rules for each run
+
+1. Write all prose (PR text, commit bodies, docs) in ASD-STE100 Simplified Technical English: short sentences, active voice, no "should", "may" or "might".
+2. Use conventional commits. End each commit message with `Co-Authored-By: Claude <noreply@anthropic.com>`.
+3. Do not push to `main`. Push a branch named `agent/<yyyy-mm-dd>-<short-topic>` and open one pull request for the run.
+4. Before you start, list the open pull requests (`gh pr list`). If an open agent PR already fixes a problem, do not fix it again. Do not open a second PR for the same problem.
+5. Run `npm run lint`, `npm run format:check` and `npm test` before you push, if the sandbox can run them. Put the results in the PR body.
+6. Do not change the visitor-facing behavior that `tests/` checks, unless the change fixes a bug. If you change a test, explain why in the PR body.
+7. If you cannot do a step (for example, no admin token for branch protection), write that in the PR body or in the run summary. Do not report a step as done when you did not verify it.
+
+## Part 1: verify the 3 board items
+
+A board review on 2026-10-16 chose these 3 items. For each item, run the check. If a check fails, fix the cause in your PR.
+
+### Item 1: the repository has a clean baseline
+
+Check:
+
+- `git log --oneline` shows commits on `main`.
+- The repository has no one-off debug files at the root (for example `.probe.mjs` or `.pw-precheck.config.js`).
+- `git status` is clean after `npm run build` and `npm test` (the `.gitignore` covers all build output).
+
+### Item 2: the docs describe the pack model, not the old `_places/` model
+
+Check:
+
+- The folder `_places/` does not exist.
+- `grep -rn "_places\|KINDS\|PREFABS" --exclude-dir=node_modules --exclude-dir=.sdlc .` finds matches only in the historical text of `docs/adr/001-place-model.md` and in the "Context" section of `docs/adr/002-pack-structure.md`.
+- `docs/adr/001-place-model.md` has the status "Superseded by ADR-002". `docs/adr/002-pack-structure.md` has the status "Accepted". `docs/adr/README.md` agrees.
+- `docs/architecture.md` sections 1 to 5 agree with the code: `_plugins/packs.rb`, `_layouts/place.html` (`window.PLACE`) and `assets/js/engine.js` (`ctx`, `MOODS`, `resolveSize`).
+- The "Add a place" steps in `README.md` work. To check this, follow them in a temporary pack, run the build, then remove the temporary pack.
+
+### Item 3: CI is green and the live site works
+
+Check:
+
+- `gh run list --branch main --limit 1` shows a run with the conclusion `success`, and the jobs "Build and smoke test", "Deploy to GitHub Pages" and "Smoke test the live site" all succeeded.
+- `curl -s -o /dev/null -w "%{http_code}"` gives 200 for https://agento3.github.io/aws-valley/ and https://agento3.github.io/aws-valley/moon/moon-base/.
+- `gh api repos/AgentO3/aws-valley/branches/main/protection` shows branch protection that requires the CI check "Build and smoke test". If the token cannot read or set branch protection, report this to the owner. Do not try other ways to get access.
+
+## Part 2: red team
+
+If all checks in Part 1 pass, red team the implementation. Look for real defects, not style preferences. Areas to examine:
+
+- `_plugins/packs.rb`: bad pack names, path traversal, symlinks, files that Jekyll copies by mistake, errors that do not stop the build.
+- `assets/js/engine.js`, `assets/js/view.js`, `assets/js/kit.js`: pack errors that escape the `try`/`catch`, a pack that changes global state, the `ctx.store` key prefix, door and exit triggers, the `?from=` return, the `?view=` value.
+- `packs/**`: missing `CREDITS.md`, models over the 300 KB budget, shared code in `packs/moon/lib/` that other packs depend on.
+- `.github/workflows/ci.yml`: unpinned actions, too-wide permissions, a deploy that can run when the tests fail, a live test that cannot fail.
+- `tests/`: tests that pass when the feature is broken, timing that depends on the frame rate, BDR acceptance criteria with no test.
+- Front matter: an unknown `mood`, a bad `position` or a bad `size` that the build accepts with no error.
+
+Rank the problems by the risk to a visitor or to the deploy. Fix the top 3 in one PR. For each fix, add or change a test that fails before the fix and passes after it. In the PR body, list the 3 problems, the evidence (file and line), the fix and the test. Also list the next 3 problems that you found but did not fix.
+
+## Run summary
+
+At the end of each run, write a short summary: the result of each Part 1 check, the PR link (or "no PR"), and any step that you could not verify.
