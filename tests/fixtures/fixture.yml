@@ -1,0 +1,2 @@
+# Fixture site: test packs for BDR-009..012. Build: npm run build:fixtures.
+packs_dir: tests/fixtures/packs
