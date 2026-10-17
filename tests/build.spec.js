@@ -1,7 +1,7 @@
 // Build tests for _plugins/packs.rb (BDR-009, ADR-001). These tests run Jekyll on small temporary
 // sites and read the output files. They need no browser.
 import { spawnSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test, expect } from '@playwright/test';
@@ -141,5 +141,45 @@ test('E14: pack URLs include the base path', () => {
   expect(shed.url).toBe('/aws-valley/shed/');
   expect(shed.base).toBe('/aws-valley/shed/');
   expect(shed.parent.url).toBe('/aws-valley/');
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('red team: the build does not publish PROMPT.md', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'cozy-prompt-'));
+  const run = spawnSync('bundle', ['exec', 'jekyll', 'build', '--strict_front_matter', '-d', dir], {
+    cwd: ROOT,
+    encoding: 'utf8'
+  });
+  expect(run.status).toBe(0);
+  expect(existsSync(join(dir, 'PROMPT.md'))).toBe(false);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+const BAD_VALUES = [
+  ['mood: sunny', 'unknown mood "sunny"'],
+  ['mood: [golden]', 'mood must be a name or an object'],
+  ['position: [1, 2]', 'position must be [x, y, z]'],
+  ['position: left', 'position must be [x, y, z]'],
+  ['size: big', 'size must be an object'],
+  ['size: { ring: -3 }', 'size.ring must be a positive number'],
+  ['size: { ring: wide }', 'size.ring must be a positive number'],
+  ['size: { radius: 3 }', 'unknown size key "radius"']
+];
+for (const [line, message] of BAD_VALUES) {
+  test(`red team: the front matter "${line}" stops the build`, () => {
+    const dir = site({ 'index.md': page('Root'), 'shed/index.md': `---\ntitle: Shed\n${line}\n---\n` });
+    const run = build(dir);
+    expect(run.status).not.toBe(0);
+    expect(run.output).toContain(message);
+    rmSync(dir, { recursive: true, force: true });
+  });
+}
+
+test('red team: a symlink inside a pack stops the build', () => {
+  const dir = site({ 'index.md': page('Root'), 'shed/index.md': page('Shed') });
+  symlinkSync('/etc', join(dir, 'packs', 'shed', 'models'));
+  const run = build(dir);
+  expect(run.status).not.toBe(0);
+  expect(run.output).toContain('packs/shed/models is a symlink');
   rmSync(dir, { recursive: true, force: true });
 });
