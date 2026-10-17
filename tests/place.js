@@ -40,10 +40,21 @@ export class Place {
   }
 
   // The scene is ready when the engine exposes its debug object and all models have loaded.
+  // Then the helper turns off the shadows and the bloom. Headless SwiftShader spends more than half of each
+  // frame on the two shadow maps, and on a CI runner a frame can block the page for many seconds.
+  // The tests do not compare pixels, so this does not change what they check.
   async ready() {
     await expect
       .poll(() => this.page.evaluate(() => window.__placeDebug?.pending() ?? -1), { timeout: 30_000 })
       .toBe(0);
+    await this.page.evaluate(() => {
+      const scene = document.querySelector('a-scene');
+      scene.renderer.shadowMap.enabled = false;
+      scene.object3D.traverse((o) => {
+        if (o.isLight) o.castShadow = false;
+      });
+      if (window.__bloom) window.__bloom.enabled = false;
+    });
   }
 
   data() {
