@@ -64,6 +64,18 @@ If all checks in Part 1 pass, red team the implementation. Look for real defects
 
 Rank the problems by the risk to a visitor or to the deploy. Fix the top 3 in one PR. For each fix, add or change a test that fails before the fix and passes after it. In the PR body, list the 3 problems, the evidence (file and line), the fix and the test. Also list the next 3 problems that you found but did not fix.
 
+## Part 3: health check items
+
+A second scheduled agent does a project health check. It adds improvement items to the list below. The owner merges its pull request to accept the items.
+
+After Part 1 and Part 2, do the first item in this list that has the status `open` and no open agent PR. When your PR for an item is open, change the status of that item to `in PR #<number>` in the same PR. Do not delete items. The owner changes the status to `done` after the merge.
+
+<!-- health-check-items: start -->
+
+No items yet.
+
+<!-- health-check-items: end -->
+
 ## Run summary
 
 At the end of each run, write a short summary: the result of each Part 1 check, the PR link (or "no PR"), and any step that you could not verify.
