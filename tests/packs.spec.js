@@ -92,7 +92,7 @@ test.describe('BDR-011 place rules stay in their place', () => {
   test('S3: the score action is available only in the arcade', async ({ page }) => {
     const place = new Place(page);
     await place.open('arcade/');
-    expect(await page.evaluate(() => window.__placeDebug.actions)).toEqual(['score']);
+    expect(await page.evaluate(() => window.__placeDebug.actions)).toEqual(['score', 'quirks']);
     await expect(page.getByRole('button', { name: 'score' })).toBeVisible();
     await place.open('vault/');
     expect(await page.evaluate(() => window.__placeDebug.actions)).toEqual([]);
@@ -122,6 +122,30 @@ test.describe('BDR-011 place rules stay in their place', () => {
     await place.open('vault/');
     expect(await place.messages()).toContain('score: null');
     expect(await place.debug(() => window.__placeDebug.store())).toEqual({});
+  });
+});
+
+test.describe('red team: ctx.store and ctx.model', () => {
+  test('one value that is not JSON does not hide the other keys', async ({ page }) => {
+    const place = new Place(page);
+    await place.open('arcade/');
+    await page.evaluate(() => {
+      localStorage.setItem('cozy:pack:arcade:bad', 'undefined');
+      window.__placeDebug.act('score');
+    });
+    expect(await place.debug(() => window.__placeDebug.store())).toEqual({ score: 1 });
+  });
+
+  test('store.set(undefined) saves nothing, and a model path cannot leave the pack folder', async ({ page }) => {
+    const place = new Place(page);
+    await place.open('arcade/');
+    const requests = [];
+    page.on('request', (r) => requests.push(r.url()));
+    await page.evaluate(() => window.__placeDebug.act('quirks'));
+    expect(await page.evaluate(() => localStorage.getItem('cozy:pack:arcade:gone'))).toBeNull();
+    const errors = await page.evaluate(() => window.__placeDebug.errors);
+    expect(errors.map((e) => e.message)).toContain('the model path leaves the pack folder');
+    expect(requests.filter((u) => u.endsWith('x.glb'))).toEqual([]);
   });
 });
 
