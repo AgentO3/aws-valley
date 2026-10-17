@@ -13,6 +13,8 @@ module Packs
   MODULES = %w[exterior.js interior.js rules.js].freeze
   VIEW_SWITCHES = %w[key key-and-button url].freeze
   REMOVED_KEYS = %w[type biome parent].freeze
+  MOODS = %w[golden moonlight hearth grotto].freeze
+  SIZE_KEYS = %w[ring walk_limit exit].freeze
 
   def self.fatal(message)
     raise Jekyll::Errors::FatalException, "packs: #{message}"
@@ -99,6 +101,7 @@ module Packs
         next if name.start_with?('.')
 
         path = File.join(dir_abs, name)
+        Packs.fatal("#{path.delete_prefix("#{@site.source}/")} is a symlink, and packs do not allow symlinks") if File.symlink?(path)
         in_pack = sub.empty? ? name : File.join(sub, name)
         if File.directory?(path)
           if File.file?(File.join(path, 'index.md'))
@@ -133,8 +136,32 @@ module Packs
       data = pack[:page].data
       title = data['title']
       Packs.fatal("#{pack[:dir]}/index.md has no title") if title.nil? || title.to_s.strip.empty?
+      check_values(pack)
       REMOVED_KEYS.each do |key|
         Jekyll.logger.warn('packs:', "#{pack[:dir]}/index.md: key \"#{key}\" was removed (ADR-001) and is ignored") if data.key?(key)
+      end
+    end
+
+    def check_values(pack)
+      data = pack[:page].data
+      where = "#{pack[:dir]}/index.md"
+      mood = data['mood']
+      if mood.is_a?(String) && !MOODS.include?(mood)
+        Packs.fatal("#{where}: unknown mood #{mood.inspect} (use #{MOODS.join(', ')} or an object)")
+      elsif !mood.nil? && !mood.is_a?(String) && !mood.is_a?(Hash)
+        Packs.fatal("#{where}: mood must be a name or an object")
+      end
+      position = data['position']
+      unless position.nil? || (position.is_a?(Array) && position.length == 3 && position.all? { |v| v.is_a?(Numeric) })
+        Packs.fatal("#{where}: position must be [x, y, z] with 3 numbers")
+      end
+      size = data['size']
+      return if size.nil?
+
+      Packs.fatal("#{where}: size must be an object with ring, walk_limit and exit") unless size.is_a?(Hash)
+      size.each do |key, value|
+        Packs.fatal("#{where}: unknown size key #{key.inspect}") unless SIZE_KEYS.include?(key.to_s)
+        Packs.fatal("#{where}: size.#{key} must be a positive number") unless value.is_a?(Numeric) && value.positive?
       end
     end
 

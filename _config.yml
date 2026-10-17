@@ -16,6 +16,7 @@ liquid:
 exclude:
   - packs
   - README.md
+  - PROMPT.md
   - .sdlc
   - docs
   - tests
