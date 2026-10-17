@@ -1,0 +1,73 @@
+- generic [ref=e2]:
+  - generic:
+    - generic [ref=e4]:
+      - generic [ref=e5]: 👧
+      - generic [ref=e6]:
+        - strong [ref=e7]: Izzy
+        - generic [ref=e8]: Level 12
+        - generic [ref=e11]: 350 / 600
+    - generic [ref=e12]:
+      - generic [ref=e13]: ☀️
+      - generic [ref=e14]:
+        - strong [ref=e15]: Spring 10
+        - generic [ref=e16]: 10:30 AM
+    - generic [ref=e17]:
+      - generic [ref=e18]:
+        - generic [ref=e19]: ★
+        - generic [ref=e20]: "0"
+      - generic [ref=e23]: "0"
+    - generic [ref=e24]:
+      - generic [ref=e25]: Quests
+      - generic [ref=e26]:
+        - generic [ref=e27]:
+          - generic [ref=e28]: 🐔
+          - text: Build the Chicken Coop
+        - list [ref=e29]:
+          - listitem [ref=e30]:
+            - generic [ref=e32]: Talk to the Carpenter
+          - listitem [ref=e33]:
+            - generic [ref=e35]: Gather materials
+          - listitem [ref=e36]:
+            - generic [ref=e38]: Add the shipments
+          - listitem [ref=e39]:
+            - generic [ref=e41]: Build the coop
+          - listitem [ref=e42]:
+            - generic [ref=e44]: Chickens move in
+    - generic [ref=e45]:
+      - button "Map" [ref=e46] [cursor=pointer]: 🗺️
+      - button "Inventory" [ref=e47] [cursor=pointer]: 🎒
+      - button "Settings" [ref=e48] [cursor=pointer]: ⚙️
+    - generic [ref=e49]:
+      - button "Watering can" [ref=e50] [cursor=pointer]:
+        - generic [ref=e51]: "1"
+        - generic [ref=e52]: 🫗
+        - emphasis
+      - button "Shovel" [ref=e53] [cursor=pointer]:
+        - generic [ref=e54]: "2"
+        - generic [ref=e55]: 🪏
+        - emphasis
+      - button "Axe" [ref=e56] [cursor=pointer]:
+        - generic [ref=e57]: "3"
+        - generic [ref=e58]: 🪓
+        - emphasis
+      - button "Berries" [ref=e59] [cursor=pointer]:
+        - generic [ref=e60]: "4"
+        - generic [ref=e61]: 🍓
+        - emphasis [ref=e62]: "18"
+      - button "Wood" [ref=e63] [cursor=pointer]:
+        - generic [ref=e64]: "5"
+        - generic [ref=e65]: 🪵
+        - emphasis [ref=e66]: "52"
+      - button "Stone" [ref=e67] [cursor=pointer]:
+        - generic [ref=e68]: "6"
+        - generic [ref=e69]: 🪨
+        - emphasis [ref=e70]: "26"
+      - button "Flower" [ref=e71] [cursor=pointer]:
+        - generic [ref=e72]: "7"
+        - generic [ref=e73]: 🌸
+        - emphasis [ref=e74]: "8"
+      - button "Milk" [ref=e75] [cursor=pointer]:
+        - generic [ref=e76]: "8"
+        - generic [ref=e77]: 🥛
+        - emphasis [ref=e78]: "6"
+    - text: ▲ ◀ ▶ ▼
