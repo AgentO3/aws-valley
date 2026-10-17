@@ -213,6 +213,11 @@ function instances(scene, items, o) {
 function modelLoader(id, base, root) {
   return function (path, options) {
     const o = options || {};
+    // A model path stays inside the pack folder (ADR-002).
+    if (typeof path !== 'string' || /^([a-z][a-z0-9+.-]*:|\/|\\)/i.test(path) || path.split(/[\\/]/).includes('..')) {
+      report(id, 'model ' + path, new Error('the model path leaves the pack folder'));
+      return Promise.resolve(new THREE.Group());
+    }
     if (Array.isArray(o.instances) && !o.instances.length) return Promise.resolve(new THREE.Group());
     return load(base + path).then(
       function (scene) {
@@ -233,6 +238,8 @@ function modelLoader(id, base, root) {
 function makeStore(id) {
   const prefix = 'cozy:pack:' + id + ':';
   const memory = new Map();
+  // Keys that localStorage refused (for example, a full quota). The memory value is newer than the stored one.
+  const unsaved = new Set();
   function local() {
     try {
       return window.localStorage;
@@ -240,8 +247,9 @@ function makeStore(id) {
       return null;
     }
   }
-  return Object.freeze({
+  const store = {
     get: function (key) {
+      if (unsaved.has(key)) return memory.get(key);
       try {
         const v = local().getItem(prefix + key);
         return v === null ? null : JSON.parse(v);
@@ -250,22 +258,28 @@ function makeStore(id) {
       }
     },
     set: function (key, value) {
+      // JSON cannot hold undefined. Saving it would store the text "undefined", which no read can parse.
+      if (value === undefined) return store.remove(key);
       memory.set(key, value);
       try {
         local().setItem(prefix + key, JSON.stringify(value));
+        unsaved.delete(key);
       } catch {
         // Blocked storage: keep the value in memory for this page (NFR-4).
+        unsaved.add(key);
       }
     },
     remove: function (key) {
       memory.delete(key);
+      unsaved.delete(key);
       try {
         local().removeItem(prefix + key);
       } catch {
         // Blocked storage: nothing to remove.
       }
     }
-  });
+  };
+  return Object.freeze(store);
 }
 
 function storeCopy(id) {
@@ -275,7 +289,12 @@ function storeCopy(id) {
     const ls = window.localStorage;
     for (let i = 0; i < ls.length; i++) {
       const k = ls.key(i);
-      if (k.startsWith(prefix)) out[k.slice(prefix.length)] = JSON.parse(ls.getItem(k));
+      if (!k.startsWith(prefix)) continue;
+      try {
+        out[k.slice(prefix.length)] = JSON.parse(ls.getItem(k));
+      } catch {
+        // One value that is not JSON must not hide the other keys.
+      }
     }
   } catch {
     // Blocked storage: no stored keys.
