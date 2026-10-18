@@ -143,3 +143,29 @@ test('E14: pack URLs include the base path', () => {
   expect(shed.parent.url).toBe('/aws-valley/');
   rmSync(dir, { recursive: true, force: true });
 });
+
+test('red team: a pack title is escaped in the HTML title and the HUD', () => {
+  const dir = site({ 'index.md': page('Root'), 'evil/index.md': page('"<b>Bold</b> & co"') });
+  expect(build(dir).status).toBe(0);
+  const html = readFileSync(join(dir, 'out', 'evil', 'index.html'), 'utf8');
+  expect(html.slice(0, html.indexOf('window.PLACE'))).not.toContain('<b>Bold</b>');
+  expect(html).toContain('<title>&lt;b&gt;Bold&lt;/b&gt; &amp; co ·');
+  expect(html).toContain('<div id="hud">&lt;b&gt;Bold&lt;/b&gt; &amp; co ·');
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('red team: the folder name "assets" stops the build', () => {
+  const dir = site({ 'index.md': page('Root'), 'assets/index.md': page('Assets') });
+  const run = build(dir);
+  expect(run.status).not.toBe(0);
+  expect(run.output).toContain('bad pack folder name "assets"');
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('red team: a pack file named index.html stops the build', () => {
+  const dir = site({ 'index.md': page('Root'), 'shed/index.md': page('Shed'), 'shed/index.html': '<p>x</p>' });
+  const run = build(dir);
+  expect(run.status).not.toBe(0);
+  expect(run.output).toContain('packs/shed/index.html would replace the page of the pack');
+  rmSync(dir, { recursive: true, force: true });
+});

@@ -7,7 +7,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ page.title }} · {{ site.title }}</title>
+  <title>{{ page.title | escape }} · {{ site.title }}</title>
   <link rel="icon" href="data:,">
   <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/meshoptimizer@0.22.0/meshopt_decoder.js"></script>
@@ -45,7 +45,7 @@
 <body>
   <div id="fade"></div>
   {%- assign view_switch = site.view_switch | default: "key" %}
-  <div id="hud">{{ page.title }} · WASD to move · click to look{% if view_switch == "key" or view_switch == "key-and-button" %} · V to switch view{% endif %}</div>
+  <div id="hud">{{ page.title | escape }} · WASD to move · click to look{% if view_switch == "key" or view_switch == "key-and-button" %} · V to switch view{% endif %}</div>
   <div id="say" role="status" aria-live="polite"></div>
   <div id="controls">
     <div id="actions"></div>
