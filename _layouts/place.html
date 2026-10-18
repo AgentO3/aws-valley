@@ -64,8 +64,8 @@
   </a-scene>
 
   <script>
-    window.PLACE = Object.assign({{ page.place | jsonify }}, {
-      text: {{ content | strip_html | normalize_whitespace | jsonify }},
+    window.PLACE = Object.assign({{ page.place | jsonify | replace: "<", "\u003c" }}, {
+      text: {{ content | strip_html | normalize_whitespace | jsonify | replace: "<", "\u003c" }},
       viewSwitch: {{ view_switch | jsonify }}
     });
   </script>

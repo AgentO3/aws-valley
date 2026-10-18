@@ -69,6 +69,16 @@ for (const bad of ['models', 'pips_house', 'Pips']) {
   });
 }
 
+test('a title with a script end tag cannot close the inline PLACE script', () => {
+  const dir = site({ 'index.md': page('Root'), 'evil/index.md': page('"A </script><i>x"', 'Hello.') });
+  expect(build(dir).status).toBe(0);
+  const html = readFileSync(join(dir, 'out', 'evil', 'index.html'), 'utf8');
+  const script = html.slice(html.indexOf('window.PLACE'));
+  expect(script.slice(0, script.indexOf('</script>'))).toContain('"title":"A \\u003c/script>');
+  expect(place(dir, 'evil').title).toBe('A </script><i>x');
+  rmSync(dir, { recursive: true, force: true });
+});
+
 test('BDR-009 S1 + S3: add a pack folder, then remove it', () => {
   const dir = site({ 'index.md': page('Root'), 'pipshouse/index.md': page('Pips House', 'Hello.') });
   expect(build(dir).status).toBe(0);
