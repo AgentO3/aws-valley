@@ -69,6 +69,10 @@ jobs:
           path: playwright-report/
           retention-days: 14
 
+      # The live smoke test reads this file to prove that the live site is the commit that CI built.
+      - name: Write the build marker
+        run: echo "$GITHUB_SHA" > _site/build-sha.txt
+
       - uses: actions/upload-pages-artifact@v5
         with:
           path: _site/
@@ -108,6 +112,19 @@ jobs:
 
       - run: npm ci
       - run: npx playwright install --with-deps chromium
+
+      - name: Check that the live site is this commit
+        env:
+          LIVE_URL: ${{ needs.deploy.outputs.page_url }}
+        run: |
+          if [ -z "$LIVE_URL" ]; then echo "The deploy gave no page URL." >&2; exit 1; fi
+          for i in 1 2 3 4 5 6; do
+            live=$(curl -fsS "${LIVE_URL%/}/build-sha.txt" | tr -d '[:space:]') || live=""
+            if [ "$live" = "$GITHUB_SHA" ]; then echo "The live site is $live."; exit 0; fi
+            echo "Try $i: the live site is '$live'. Expected $GITHUB_SHA." >&2
+            sleep 10
+          done
+          exit 1
 
       # delivery/static-hosting rule 13: run the same smoke tests against the live URL after each deploy.
       - name: Smoke test
