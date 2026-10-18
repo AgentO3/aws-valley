@@ -9,7 +9,7 @@
 # tests/build.spec.js and the fixture builds make a break visible.
 module Packs
   NAME = /\A[a-z0-9-]+\z/.freeze
-  RESERVED = %w[models textures sounds lib].freeze
+  RESERVED = %w[models textures sounds lib assets].freeze
   MODULES = %w[exterior.js interior.js rules.js].freeze
   VIEW_SWITCHES = %w[key key-and-button url].freeze
   REMOVED_KEYS = %w[type biome parent].freeze
@@ -123,6 +123,7 @@ module Packs
     end
 
     def add_file(pack, in_pack)
+      Packs.fatal("#{pack[:dir]}/#{in_pack} would replace the page of the pack") if in_pack == 'index.html'
       pack[:files] << in_pack
       source_dir = File.dirname(File.join(pack[:dir], in_pack))
       url = "#{pack[:permalink]}#{in_pack}"
