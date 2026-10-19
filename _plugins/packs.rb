@@ -13,6 +13,10 @@ module Packs
   MODULES = %w[exterior.js interior.js rules.js].freeze
   VIEW_SWITCHES = %w[key key-and-button url].freeze
   REMOVED_KEYS = %w[type biome parent].freeze
+  FILE_NAME = %r{\A[A-Za-z0-9._/-]+\z}.freeze
+  MOOD_COLORS = %w[top horizon bottom sun hemiSky hemiGround fog background].freeze
+  MOOD_NUMBERS = %w[sunI hemiI fogD exposure].freeze
+  MOOD_OTHER = %w[sunDir ground stars planet].freeze
 
   def self.fatal(message)
     raise Jekyll::Errors::FatalException, "packs: #{message}"
@@ -59,6 +63,7 @@ module Packs
       walk('', packs)
       packs.each_value { |pack| pack[:page] = PackPage.new(site, pack[:dir], pack[:permalink]) }
       packs.each_value { |pack| check_front_matter(pack) }
+      check_collisions(packs)
       packs.each_value do |pack|
         pack[:page].data['place'] = place_hash(pack, packs)
         site.pages << pack[:page]
@@ -123,6 +128,9 @@ module Packs
     end
 
     def add_file(pack, in_pack)
+      unless FILE_NAME.match?(in_pack) && in_pack.split('/').none? { |part| part.start_with?('.') }
+        Packs.fatal("bad file name \"#{in_pack}\" in #{pack[:dir]} (use letters, digits, \".\", \"_\" and \"-\")")
+      end
       pack[:files] << in_pack
       source_dir = File.dirname(File.join(pack[:dir], in_pack))
       url = "#{pack[:permalink]}#{in_pack}"
@@ -133,8 +141,51 @@ module Packs
       data = pack[:page].data
       title = data['title']
       Packs.fatal("#{pack[:dir]}/index.md has no title") if title.nil? || title.to_s.strip.empty?
+      check_mood_object(pack)
       REMOVED_KEYS.each do |key|
         Jekyll.logger.warn('packs:', "#{pack[:dir]}/index.md: key \"#{key}\" was removed (ADR-001) and is ignored") if data.key?(key)
+      end
+    end
+
+    # A mood object is merged over `golden`. A wrong type reaches three.js and stops the whole scene.
+    def check_mood_object(pack)
+      mood = pack[:page].data['mood']
+      return unless mood.is_a?(Hash)
+
+      where = "#{pack[:dir]}/index.md: mood"
+      mood.each do |key, value|
+        key = key.to_s
+        if MOOD_COLORS.include?(key)
+          Packs.fatal("#{where}.#{key} must be a color string") unless value.is_a?(String) && !value.strip.empty?
+        elsif MOOD_NUMBERS.include?(key)
+          Packs.fatal("#{where}.#{key} must be a number") unless value.is_a?(Numeric)
+        elsif key == 'sunDir'
+          Packs.fatal("#{where}.sunDir must be [x, y, z] with 3 numbers") unless numbers?(value, 3)
+        elsif key == 'ground'
+          ok = value.is_a?(Array) && value.length == 2 && value.all? { |c| c.is_a?(String) }
+          Packs.fatal("#{where}.ground must be 2 color strings") unless ok
+        elsif !MOOD_OTHER.include?(key)
+          Packs.fatal("#{where}: unknown key #{key.inspect}")
+        end
+      end
+    end
+
+    def numbers?(value, count)
+      value.is_a?(Array) && value.length == count && value.all? { |v| v.is_a?(Numeric) }
+    end
+
+    # Two pack outputs, or a pack output and a site file, must not share one URL.
+    def check_collisions(packs)
+      taken = {}
+      @site.pages.each { |page| taken[page.url] = page.path }
+      @site.static_files.each { |file| taken[file.url] = file.path unless file.is_a?(PackFile) }
+      packs.each_value do |pack|
+        urls = pack[:files].map { |f| ["#{pack[:permalink]}#{f}", "#{pack[:dir]}/#{f}"] }
+        urls << [pack[:permalink], "#{pack[:dir]}/index.md"]
+        urls.each do |url, source|
+          Packs.fatal("#{source} and #{taken[url]} give the same URL #{url}") if taken.key?(url)
+          taken[url] = source
+        end
       end
     end
 

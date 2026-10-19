@@ -143,3 +143,42 @@ test('E14: pack URLs include the base path', () => {
   expect(shed.parent.url).toBe('/aws-valley/');
   rmSync(dir, { recursive: true, force: true });
 });
+
+const mood = (value) => `---\ntitle: Shed\nmood: ${value}\n---\n`;
+
+for (const bad of ['{ sunDir: 5 }', '{ hemiI: loud }', '{ fog: 12 }', '{ ground: ["#111"] }', '{ sunn: 1 }']) {
+  test(`red team: the mood object ${bad} stops the build`, () => {
+    const dir = site({ 'index.md': page('Root'), 'shed/index.md': mood(bad) });
+    const run = build(dir);
+    expect(run.status).not.toBe(0);
+    expect(run.output).toContain('packs/shed/index.md: mood');
+    rmSync(dir, { recursive: true, force: true });
+  });
+}
+
+test('red team: a mood object with valid values builds', () => {
+  const dir = site({
+    'index.md': page('Root'),
+    'shed/index.md': mood('{ sunI: 1.5, sunDir: [0, 1, 0], fog: "#112233", ground: ["#111111", "#222222"] }')
+  });
+  expect(build(dir).status).toBe(0);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('red team: a root pack file named 404.html stops the build', () => {
+  const dir = site({ 'index.md': page('Root'), '404.html': '<p>mine</p>' });
+  const run = build(dir);
+  expect(run.status).not.toBe(0);
+  expect(run.output).toContain('give the same URL /404.html');
+  rmSync(dir, { recursive: true, force: true });
+});
+
+for (const bad of ['models/a#b.glb', 'models/100%25.glb', 'models/a b.glb', 'models/a?b.glb']) {
+  test(`red team: the pack file name "${bad}" stops the build`, () => {
+    const dir = site({ 'index.md': page('Root'), [bad]: 'glb' });
+    const run = build(dir);
+    expect(run.status).not.toBe(0);
+    expect(run.output).toContain('bad file name');
+    rmSync(dir, { recursive: true, force: true });
+  });
+}
