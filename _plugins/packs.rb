@@ -13,6 +13,9 @@ module Packs
   MODULES = %w[exterior.js interior.js rules.js].freeze
   VIEW_SWITCHES = %w[key key-and-button url].freeze
   REMOVED_KEYS = %w[type biome parent].freeze
+  # A door sits a little inside its ring, and a trigger fires 1.3 m away. A ring or an exit that is
+  # more than this many metres beyond the walk limit gives a door that the visitor cannot reach.
+  REACH_SLACK = 2.0
 
   def self.fatal(message)
     raise Jekyll::Errors::FatalException, "packs: #{message}"
@@ -133,8 +136,25 @@ module Packs
       data = pack[:page].data
       title = data['title']
       Packs.fatal("#{pack[:dir]}/index.md has no title") if title.nil? || title.to_s.strip.empty?
+      check_size(pack, data['size'])
       REMOVED_KEYS.each do |key|
         Jekyll.logger.warn('packs:', "#{pack[:dir]}/index.md: key \"#{key}\" was removed (ADR-001) and is ignored") if data.key?(key)
+      end
+    end
+
+    # The player cannot walk further than size.walk_limit. A ring or an exit far beyond it gives a door
+    # that the visitor cannot reach. The default values of the engine are always inside the limit.
+    def check_size(pack, size)
+      return unless size.is_a?(Hash)
+
+      limit = size['walk_limit']
+      return unless limit.is_a?(Numeric)
+
+      %w[ring exit].each do |key|
+        value = size[key]
+        next unless value.is_a?(Numeric) && value > limit + REACH_SLACK
+
+        Packs.fatal("#{pack[:dir]}/index.md: size.#{key} (#{value}) is beyond size.walk_limit (#{limit}), so the visitor cannot reach it")
       end
     end
 

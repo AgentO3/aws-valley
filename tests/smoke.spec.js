@@ -114,3 +114,24 @@ test('BDR-005: an unknown place shows the 404 page', async ({ page }) => {
 test('ADR-001: the old URL /moon-base/ is gone', async ({ request }) => {
   expect((await request.get('moon-base/')).status()).toBe(404);
 });
+
+test('red team: a page that comes back from the back/forward cache reloads', async ({ page }) => {
+  const place = new Place(page);
+  await place.open('cozy-house/');
+  await page.evaluate(() => {
+    window.__marker = 1;
+    window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
+  });
+  await expect.poll(() => page.evaluate(() => window.__marker), { timeout: 15_000 }).toBeUndefined();
+});
+
+test('red team: a scene build that fails clears the black fade and tells the visitor', async ({ page }) => {
+  await page.route('**/assets/js/engine.js', async (route) => {
+    const res = await route.fetch();
+    const body = (await res.text()).replace('buildLights(scene.object3D);', "throw new Error('test failure');");
+    await route.fulfill({ response: res, body });
+  });
+  await page.goto('cozy-house/');
+  await expect(page.locator('#fade')).toHaveClass(/clear/, { timeout: 30_000 });
+  await expect(page.locator('#say')).toContainText('did not load');
+});
