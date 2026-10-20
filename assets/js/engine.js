@@ -79,11 +79,15 @@ function num(v, fallback) {
   return typeof v === 'number' && isFinite(v) ? v : fallback;
 }
 
+function positive(v, fallback) {
+  return num(v, fallback) > 0 ? v : fallback;
+}
+
 // Child ring radius, walk limit and exit distance. The defaults are the values for an open world.
 function resolveSize(size, children) {
   const s = size || {};
-  const ring = num(s.ring, Math.max(14, children * 4));
-  return { ring: ring, walk_limit: num(s.walk_limit, ring + 12), exit: num(s.exit, 9) };
+  const ring = positive(s.ring, Math.max(14, children * 4));
+  return { ring: ring, walk_limit: positive(s.walk_limit, ring + 12), exit: positive(s.exit, 9) };
 }
 
 function freeze(o) {

@@ -88,6 +88,9 @@ export function createView(setting, onChange) {
   if (setting === 'key' || setting === 'key-and-button') {
     window.addEventListener('keydown', function (e) {
       if (e.code !== 'KeyV' || e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+      // A visitor who types in a field does not switch the view.
+      const t = e.target;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
       toggle();
     });
   }
