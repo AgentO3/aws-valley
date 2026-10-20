@@ -449,6 +449,11 @@ function go(url) {
 }
 
 window.addEventListener('pagehide', runExit);
+// The browser can keep this page in its back/forward cache. After "Back", the page would have a black
+// fade, no player and no rules. A reload gives a new, working page.
+window.addEventListener('pageshow', function (e) {
+  if (e.persisted) window.location.reload();
+});
 
 const camEl = () => document.getElementById('cam');
 const rigEl = () => document.getElementById('rig');
@@ -863,6 +868,9 @@ async function build() {
 function start() {
   build().catch(function (e) {
     console.error('[place] build failed: ' + (e && e.message ? e.message : e));
+    // Show the page and tell the visitor. Without this, the black fade covers the page for ever.
+    document.getElementById('fade').classList.add('clear');
+    say('This place did not load. Reload the page to try again.');
   });
 }
 

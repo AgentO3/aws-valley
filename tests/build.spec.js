@@ -143,3 +143,25 @@ test('E14: pack URLs include the base path', () => {
   expect(shed.parent.url).toBe('/aws-valley/');
   rmSync(dir, { recursive: true, force: true });
 });
+
+test('red team: a ring or an exit beyond the walk limit stops the build', () => {
+  for (const key of ['ring', 'exit']) {
+    const dir = site({
+      'index.md': page('Root'),
+      'shed/index.md': `---\ntitle: Shed\nsize:\n  ${key}: 30\n  walk_limit: 10\n---\n`
+    });
+    const run = build(dir);
+    expect(run.status).not.toBe(0);
+    expect(run.output).toContain(`size.${key} (30) is beyond size.walk_limit (10)`);
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('red team: a size inside the walk limit builds', () => {
+  const dir = site({
+    'index.md': page('Root'),
+    'shed/index.md': '---\ntitle: Shed\nsize:\n  ring: 8\n  exit: 5\n  walk_limit: 10\n---\n'
+  });
+  expect(build(dir).status).toBe(0);
+  rmSync(dir, { recursive: true, force: true });
+});
