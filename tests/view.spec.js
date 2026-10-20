@@ -147,3 +147,19 @@ test('NFR-4: with blocked localStorage the page loads in first person with no er
   expect(await place.view()).toBe('third');
   expect(place.errors).toEqual([]);
 });
+
+test('red team: the V key in a text field does not switch the view', async ({ page }) => {
+  const place = new Place(page);
+  await place.open('');
+  await page.evaluate(() => {
+    const input = document.createElement('input');
+    input.id = 'probe';
+    document.body.appendChild(input);
+    input.focus();
+  });
+  await page.keyboard.press('KeyV');
+  expect(await place.view()).toBe('first');
+  await page.evaluate(() => document.getElementById('probe').blur());
+  await page.keyboard.press('KeyV');
+  expect(await place.view()).toBe('third');
+});

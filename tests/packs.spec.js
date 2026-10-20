@@ -16,9 +16,9 @@ test.describe('BDR-009 pack folder defines a place', () => {
     const place = new Place(page);
     await place.open('');
     const labels = await place.labels();
-    for (const title of ['Arcade', 'Broken', 'Pips House', 'Shed', 'Vault']) expect(labels).toContain(title);
+    for (const title of ['Arcade', 'Broken', 'Pips House', 'Shed', 'Tight', 'Vault']) expect(labels).toContain(title);
     const { place: data } = await place.data();
-    expect(data.children.map((c) => c.id)).toEqual(['arcade', 'broken', 'pipshouse', 'shed', 'vault']);
+    expect(data.children.map((c) => c.id)).toEqual(['arcade', 'broken', 'pipshouse', 'shed', 'tight', 'vault']);
   });
 
   test('S4: files of a pack are served under the place URL; an asset folder is not a place', async ({
@@ -163,4 +163,15 @@ test.describe('BDR-012 broken pack stays contained', () => {
       expect(place.responses.filter((r) => r.status === 404)).toEqual([]);
     });
   }
+});
+
+test.describe('red team: bad size values', () => {
+  test('a zero walk_limit and a negative ring give the defaults, so the visitor can walk', async ({ page }) => {
+    const place = new Place(page);
+    await place.open('tight/');
+    await page.evaluate(() => window.__placeDebug.teleport(5, 0));
+    await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+    const b = await page.evaluate(() => window.__placeDebug.body());
+    expect(Math.hypot(b.x, b.z)).toBeCloseTo(5, 1);
+  });
 });
