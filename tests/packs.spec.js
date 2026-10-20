@@ -164,3 +164,34 @@ test.describe('BDR-012 broken pack stays contained', () => {
     });
   }
 });
+
+test.describe('red team: rules and mood guards', () => {
+  test('a mood name that is an Object property gives the golden mood', async ({ page }) => {
+    const place = new Place(page);
+    await place.open('arcade/oddities/moody/');
+    expect(await page.evaluate(() => document.querySelector('a-scene').renderer.toneMappingExposure)).toBe(0.9);
+  });
+
+  test('a null trigger does not stop the other triggers or throw', async ({ page }) => {
+    const place = new Place(page);
+    await place.open('arcade/oddities/');
+    await expect.poll(() => place.messages()).toContain('ping');
+    expect(place.errors.filter((e) => !/404|Failed to load resource/.test(e))).toEqual([]);
+  });
+
+  test('a canEnter that returns a promise is reported, and the door opens', async ({ page }) => {
+    const place = new Place(page);
+    await place.open('arcade/oddities/');
+    await place.walkTo('oddities/inner');
+    await expect(page).toHaveURL(/\/arcade\/oddities\/inner\/$/);
+  });
+
+  test('a canEnter that returns a promise gives an error message', async ({ page }) => {
+    const place = new Place(page);
+    await place.open('arcade/oddities/');
+    await place.walkTo('oddities/inner');
+    await expect
+      .poll(() => page.evaluate(() => window.__placeDebug.errors.map((e) => e.message)))
+      .toContain('canEnter must return true or false, not a promise');
+  });
+});
