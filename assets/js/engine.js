@@ -71,8 +71,9 @@ const MOODS = {
 // A mood name gives that preset. A mood object sets its own values over `golden` (design D11).
 function resolveMood(m) {
   if (m && typeof m === 'object') return Object.assign({}, MOODS.golden, m);
-  if (m && !MOODS[m]) console.warn('[place] unknown mood "' + m + '", using "golden"');
-  return MOODS[m] || MOODS.golden;
+  const known = typeof m === 'string' && Object.hasOwn(MOODS, m);
+  if (m && !known) console.warn('[place] unknown mood "' + m + '", using "golden"');
+  return known ? MOODS[m] : MOODS.golden;
 }
 
 function num(v, fallback) {
@@ -527,7 +528,12 @@ function tryDoor(tr) {
       P.id,
       'canEnter',
       function () {
-        return rules.canEnter(player.rulesCtx, door);
+        const out = rules.canEnter(player.rulesCtx, door);
+        if (out && typeof out.then === 'function') {
+          out.then(null, function () {});
+          throw new Error('canEnter must return true or false, not a promise');
+        }
+        return out;
       },
       true
     );
@@ -543,7 +549,7 @@ function tryDoor(tr) {
 
 function callAction(name) {
   const rules = player.rules;
-  const fn = rules && rules.actions && rules.actions[name];
+  const fn = rules && rules.actions && Object.hasOwn(rules.actions, name) ? rules.actions[name] : null;
   if (typeof fn !== 'function' || !player.active) return;
   guard(P.id, 'action ' + name, function () {
     return fn(player.rulesCtx);
@@ -559,7 +565,7 @@ function rulesTick(b, dt) {
       const inside = Math.hypot(b.x - pos[0], b.z - pos[2]) < num(t && t.radius, 1);
       if (inside && !player.ruleLatched.has(i)) {
         player.ruleLatched.add(i);
-        callAction(t.action);
+        callAction(t && t.action);
       } else if (!inside) player.ruleLatched.delete(i);
     });
   }
