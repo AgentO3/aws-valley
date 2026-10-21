@@ -23,14 +23,18 @@ function setup() {
     if (inside || renderer.xr.isPresenting) return render(scene, camera);
     inside = true;
     pass.camera = camera;
-    composer.render();
-    inside = false;
+    try {
+      composer.render();
+    } finally {
+      inside = false;
+    }
   };
   window.addEventListener('resize', function () {
     const s = renderer.getSize(new THREE.Vector2());
     composer.setSize(s.x, s.y);
   });
   window.__bloom = bloom;
+  window.__bloomComposer = composer;
 }
 
 if (sceneEl.hasLoaded) setup();
