@@ -72,7 +72,26 @@ After Part 1 and Part 2, do the first item in this list that has the status `ope
 
 <!-- health-check-items: start -->
 
-No items yet.
+### HC-1: CI fails because ubuntu-latest has no Ruby 3.3.4
+
+- Status: open
+- Added: 2026-10-21
+- Problem: `runs-on: ubuntu-latest` now means Ubuntu 26.04. `ruby/setup-ruby` cannot install Ruby 3.3.4 there. The step "Run ruby/setup-ruby" fails with "Unavailable version 3.3.4 for ruby on ubuntu-26.04" (https://github.com/AgentO3/aws-valley/actions/runs/39496974828). The same failure stops the PR runs 39383670999 and 39374443654. The deploy and live jobs are skipped. The next push to `main` fails the same way. Evidence: `.github/workflows/ci.yml` lines 22 and 24 (`ubuntu-latest`), `.ruby-version` (3.3.4).
+- Done when: `grep -c "ubuntu-latest" .github/workflows/ci.yml` prints 0. Every `runs-on` line names a fixed Ubuntu version that has Ruby 3.3.4 (for example `ubuntu-24.04`). The job "Build and smoke test" passes on the PR for this item.
+
+### HC-2: A-Frame and meshopt scripts load from a CDN with no integrity check
+
+- Status: open
+- Added: 2026-10-21
+- Problem: `_layouts/place.html` lines 12 and 13 load `aframe.min.js` from aframe.io and `meshopt_decoder.js` from jsDelivr with no `integrity` and no `crossorigin` attribute. The three.js addons import map (line 23) also has no integrity check. A changed or hijacked CDN file runs in every visitor's browser. The fixed version in the URL does not protect against this.
+- Done when: both `<script src="https://...">` tags in `_layouts/place.html` have `integrity="sha384-..."` and `crossorigin="anonymous"`. A test in `tests/build.spec.js` reads `_site/index.html` and fails if an external script tag has no `integrity` attribute. `npm test` passes, so the hashes match the real files.
+
+### HC-3: No automatic update check for npm, Bundler and GitHub Actions
+
+- Status: open
+- Added: 2026-10-21
+- Problem: `.github/` has only `workflows/`. It has no `dependabot.yml`. Nothing warns the owner about new versions of the npm packages in `package.json`, the gems in `Gemfile.lock`, or the actions in `ci.yml`. Most actions use a movable tag (`actions/checkout@v7`) and only `ruby/setup-ruby` uses a commit SHA. The runner image change in HC-1 shows the cost of late discovery.
+- Done when: `.github/dependabot.yml` exists with update entries for `npm`, `bundler` and `github-actions` (weekly). `npx prettier --check .github/dependabot.yml` passes. A new test or script check parses the file and confirms the three ecosystems.
 
 <!-- health-check-items: end -->
 
