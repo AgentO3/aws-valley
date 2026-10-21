@@ -114,3 +114,28 @@ test('BDR-005: an unknown place shows the 404 page', async ({ page }) => {
 test('ADR-001: the old URL /moon-base/ is gone', async ({ request }) => {
   expect((await request.get('moon-base/')).status()).toBe(404);
 });
+
+test('a bloom render that throws does not stop bloom for later frames', async ({ page }) => {
+  const place = new Place(page);
+  await place.open('');
+  const calls = await page.evaluate(() => {
+    const composer = window.__bloomComposer;
+    const renderer = document.querySelector('a-scene').renderer;
+    const real = composer.render.bind(composer);
+    let count = 0;
+    composer.render = () => {
+      count += 1;
+      if (count === 1) throw new Error('bloom test');
+    };
+    try {
+      renderer.render(document.querySelector('a-scene').object3D, document.querySelector('a-scene').camera);
+    } catch {
+      // The first call throws on purpose.
+    }
+    renderer.render(document.querySelector('a-scene').object3D, document.querySelector('a-scene').camera);
+    composer.render = real;
+    return count;
+  });
+  // Before the fix, the second call skipped the composer, so count stayed at 1.
+  expect(calls).toBeGreaterThanOrEqual(2);
+});
