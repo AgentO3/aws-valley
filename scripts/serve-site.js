@@ -2,7 +2,7 @@
 // SITE_DIR picks the build folder (default _site; the test builds are _site-fixture, _site-button, _site-url).
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
-import { extname, join, normalize } from 'node:path';
+import { extname, join, normalize, sep } from 'node:path';
 
 const SITE_DIR = process.env.SITE_DIR ?? '_site';
 const ROOT = join(import.meta.dirname, '..', SITE_DIR);
@@ -37,8 +37,15 @@ async function statOrNull(file) {
 }
 
 async function resolve(urlPath) {
-  const file = join(ROOT, normalize(decodeURIComponent(urlPath)));
-  if (!file.startsWith(ROOT)) return null;
+  let decoded;
+  try {
+    decoded = decodeURIComponent(urlPath);
+  } catch {
+    return null; // A bad escape such as "%" is a 404, not a crash.
+  }
+  const file = join(ROOT, normalize(decoded));
+  // The folder separator stops a sibling folder such as _site-fixture from matching _site.
+  if (file !== ROOT && !file.startsWith(ROOT + sep)) return null;
   const info = await statOrNull(file);
   if (info?.isDirectory()) return resolve(join(urlPath, 'index.html'));
   return info ? file : null;
