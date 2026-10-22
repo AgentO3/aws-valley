@@ -133,9 +133,20 @@ module Packs
       data = pack[:page].data
       title = data['title']
       Packs.fatal("#{pack[:dir]}/index.md has no title") if title.nil? || title.to_s.strip.empty?
+      check_position(pack)
       REMOVED_KEYS.each do |key|
         Jekyll.logger.warn('packs:', "#{pack[:dir]}/index.md: key \"#{key}\" was removed (ADR-001) and is ignored") if data.key?(key)
       end
+    end
+
+    # The engine reads x and z. A value that is not a finite number gives a door that nobody can open.
+    def check_position(pack)
+      position = pack[:page].data['position']
+      return if position.nil?
+
+      ok = position.is_a?(Array) && position.length == 3 &&
+           position.all? { |v| v.is_a?(Numeric) && v.to_f.finite? }
+      Packs.fatal("#{pack[:dir]}/index.md: position must be [x, y, z] with 3 finite numbers") unless ok
     end
 
     def url_for(pack)
