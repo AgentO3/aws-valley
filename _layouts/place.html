@@ -65,7 +65,7 @@
 
   <script>
     window.PLACE = Object.assign({{ page.place | jsonify }}, {
-      text: {{ content | strip_html | normalize_whitespace | jsonify }},
+      text: {{ content | strip_html | normalize_whitespace | replace: '&lt;', '<' | replace: '&gt;', '>' | replace: '&quot;', '"' | replace: '&amp;', '&' | jsonify }},
       viewSwitch: {{ view_switch | jsonify }}
     });
   </script>
