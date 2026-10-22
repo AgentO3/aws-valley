@@ -3,7 +3,9 @@
 import * as THREE from 'three';
 
 export default async function interior(ctx) {
-  ctx.root.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
+  const part = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+  part.name = 'slow-part';
+  ctx.root.add(part);
   await Promise.resolve();
   throw new Error('async interior broken on purpose');
 }

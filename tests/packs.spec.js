@@ -172,12 +172,12 @@ test.describe('BDR-012 broken pack stays contained', () => {
     const meshes = await page.evaluate(() => {
       const found = [];
       document.querySelector('a-scene').object3D.traverse((o) => {
-        if (o.isMesh) found.push(o.geometry.type);
+        if (o.isMesh) found.push(o.name || o.geometry.type);
       });
       return found;
     });
     expect(meshes).toContain('CircleGeometry');
-    expect(meshes).not.toContain('BoxGeometry');
+    expect(meshes).not.toContain('slow-part');
   });
 
   test('red team: a fixed position outside the walk limit goes to the arc, with an error', async ({ page }) => {
