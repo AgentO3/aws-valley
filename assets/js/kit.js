@@ -35,10 +35,17 @@ export function animate(entry) {
   return entry;
 }
 
+// A throw in one entry must not stop the frame: the engine runs the door check after tickAll().
+// The entry that threw is logged one time and removed.
 export function tickAll(seconds) {
-  for (const a of animated) {
-    if (a.time) a.time.value = seconds;
-    if (a.tick) a.tick(seconds);
+  for (const a of animated.slice()) {
+    try {
+      if (a.time) a.time.value = seconds;
+      if (a.tick) a.tick(seconds);
+    } catch (e) {
+      animated.splice(animated.indexOf(a), 1);
+      console.error('[kit] animate tick: ' + (e && e.message ? e.message : e));
+    }
   }
 }
 

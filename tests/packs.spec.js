@@ -154,6 +154,42 @@ test.describe('BDR-012 broken pack stays contained', () => {
     await expect(page).toHaveURL(/\/broken\/\?from=broken%2Fcracked$/);
   });
 
+  test('red team: an animate() entry that throws is logged one time, and the exit still works', async ({ page }) => {
+    const place = new Place(page);
+    await place.open('broken/cracked/');
+    await page.waitForTimeout(1000);
+    expect(place.errors.filter((e) => e.includes('animate tick broken on purpose'))).toHaveLength(1);
+    await place.walkTo('from=broken%2Fcracked');
+    await expect(page).toHaveURL(/\/broken\/\?from=broken%2Fcracked$/);
+  });
+
+  test('red team: an async interior that rejects gives the empty room', async ({ page }) => {
+    const place = new Place(page);
+    await place.open('broken/slow/');
+    await page.waitForTimeout(500);
+    const errors = await page.evaluate(() => window.__placeDebug.errors);
+    expect(errors.filter((e) => e.phase === 'interior')).toHaveLength(1);
+    const meshes = await page.evaluate(() => {
+      const found = [];
+      document.querySelector('a-scene').object3D.traverse((o) => {
+        if (o.isMesh) found.push(o.geometry.type);
+      });
+      return found;
+    });
+    expect(meshes).toContain('CircleGeometry');
+    expect(meshes).not.toContain('BoxGeometry');
+  });
+
+  test('red team: a fixed position outside the walk limit goes to the arc, with an error', async ({ page }) => {
+    const place = new Place(page);
+    await place.open('broken/');
+    const far = await page.evaluate(() => window.__placeDebug.placed.find((s) => s.id === 'broken/far'));
+    const limit = await page.evaluate(() => window.PLACE.size.walk_limit ?? 26);
+    expect(Math.hypot(far.x, far.z)).toBeLessThan(limit);
+    const errors = await page.evaluate(() => window.__placeDebug.errors);
+    expect(errors.filter((e) => e.id === 'broken/far' && e.phase === 'position')).toHaveLength(1);
+  });
+
   for (const path of packPaths(FIXTURE).filter((p) => !p.startsWith('broken/'))) {
     test(`S3: /${path} loads with no console error`, async ({ page }) => {
       const place = new Place(page);

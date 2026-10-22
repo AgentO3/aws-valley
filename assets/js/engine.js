@@ -665,12 +665,21 @@ async function build() {
 
   // Lay out the children on an arc in front of the spawn point, or at their `position`.
   const n = P.children.length;
+  // A fixed position that is not a finite number, or that is outside the walk limit, has a door that
+  // the visitor cannot reach. The child goes on the arc, and the engine reports it.
+  function reachable(c) {
+    const x = c.position[0],
+      z = c.position[2];
+    const ok = Number.isFinite(x) && Number.isFinite(z) && Math.hypot(x, z) <= size.walk_limit;
+    if (!ok) report(c.id, 'position', new Error('the position is not a finite point inside the walk limit'));
+    return ok;
+  }
   const spread = Math.min(300, 60 * (n - 1));
   const placed = P.children.map(function (c, i) {
     let x, z;
-    if (Array.isArray(c.position)) {
-      x = +c.position[0];
-      z = +c.position[2];
+    if (Array.isArray(c.position) && reachable(c)) {
+      x = c.position[0];
+      z = c.position[2];
     } else {
       const t = (n === 1 ? 0 : -spread / 2 + (spread * i) / (n - 1)) * DEG;
       x = size.ring * Math.sin(t);
@@ -724,7 +733,15 @@ async function build() {
       'interior',
       function () {
         try {
-          return interior(makeCtx(P.id, P.base, inside, own));
+          const out = interior(makeCtx(P.id, P.base, inside, own));
+          // An async interior that rejects gives the empty room too, as a throw does.
+          if (out && typeof out.then === 'function') {
+            out.then(null, function () {
+              clear(inside);
+              emptyRoom(inside);
+            });
+          }
+          return out;
         } catch (e) {
           failed = true;
           throw e;
