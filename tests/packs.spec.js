@@ -99,6 +99,14 @@ test.describe('BDR-011 place rules stay in their place', () => {
     await expect(page.getByRole('button', { name: 'score' })).toHaveCount(0);
   });
 
+  test('a rules trigger with a radius of 0 uses the default radius', async ({ page }) => {
+    const place = new Place(page);
+    await place.open('arcade/');
+    expect(await place.debug(() => window.__placeDebug.store())).toEqual({});
+    await page.evaluate(() => window.__placeDebug.teleport(0, -5));
+    await expect.poll(() => place.debug(() => window.__placeDebug.store())).toEqual({ score: 1 });
+  });
+
   test('S4 + S5: the saved score stays, and the vault cannot read it', async ({ page }) => {
     const place = new Place(page);
     await place.open('arcade/');

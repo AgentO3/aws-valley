@@ -556,7 +556,8 @@ function rulesTick(b, dt) {
   if (Array.isArray(rules.triggers)) {
     rules.triggers.forEach(function (t, i) {
       const pos = (t && t.position) || [0, 0, 0];
-      const inside = Math.hypot(b.x - pos[0], b.z - pos[2]) < num(t && t.radius, 1);
+      const radius = t && num(t.radius, 1) > 0 ? t.radius : 1;
+      const inside = Math.hypot(b.x - pos[0], b.z - pos[2]) < radius;
       if (inside && !player.ruleLatched.has(i)) {
         player.ruleLatched.add(i);
         callAction(t.action);
