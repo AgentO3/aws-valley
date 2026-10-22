@@ -13,6 +13,7 @@ module Packs
   MODULES = %w[exterior.js interior.js rules.js].freeze
   VIEW_SWITCHES = %w[key key-and-button url].freeze
   REMOVED_KEYS = %w[type biome parent].freeze
+  KEYS = %w[title mood position size layout].freeze
 
   def self.fatal(message)
     raise Jekyll::Errors::FatalException, "packs: #{message}"
@@ -20,8 +21,12 @@ module Packs
 
   # One page for each pack, at the folder path.
   class PackPage < Jekyll::Page
+    # The front matter keys that the author wrote, before the plugin adds its own.
+    attr_reader :authored_keys
+
     def initialize(site, dir, permalink)
       super(site, site.source, dir, 'index.md')
+      @authored_keys = data.keys
       data['layout'] ||= 'place'
       data['permalink'] = permalink
     end
@@ -133,9 +138,28 @@ module Packs
       data = pack[:page].data
       title = data['title']
       Packs.fatal("#{pack[:dir]}/index.md has no title") if title.nil? || title.to_s.strip.empty?
+      check_keys(pack)
+      check_layout(pack)
       REMOVED_KEYS.each do |key|
         Jekyll.logger.warn('packs:', "#{pack[:dir]}/index.md: key \"#{key}\" was removed (ADR-001) and is ignored") if data.key?(key)
       end
+    end
+
+    # A key that the plugin does not read is a typo (for example `postion`), or a Jekyll key that has no
+    # effect here (for example `published: false` or `permalink`). Both leave the place as it is, with no error.
+    def check_keys(pack)
+      unknown = pack[:page].authored_keys - KEYS - REMOVED_KEYS
+      return if unknown.empty?
+
+      Packs.fatal("#{pack[:dir]}/index.md: unknown front matter key #{unknown.first.inspect} (use #{KEYS.join(', ')})")
+    end
+
+    # Jekyll only warns about a layout that does not exist. The page then has no scene.
+    def check_layout(pack)
+      layout = pack[:page].data['layout']
+      return if @site.layouts.key?(layout.to_s)
+
+      Packs.fatal("#{pack[:dir]}/index.md: layout #{layout.inspect} does not exist in _layouts")
     end
 
     def url_for(pack)

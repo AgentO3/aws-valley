@@ -143,3 +143,40 @@ test('E14: pack URLs include the base path', () => {
   expect(shed.parent.url).toBe('/aws-valley/');
   rmSync(dir, { recursive: true, force: true });
 });
+
+test('red team: a layout that does not exist stops the build', () => {
+  const dir = site({ 'index.md': page('Root'), 'shed/index.md': '---\ntitle: Shed\nlayout: nolayout\n---\n' });
+  const run = build(dir);
+  expect(run.status).not.toBe(0);
+  expect(run.output).toContain('packs/shed/index.md: layout "nolayout" does not exist');
+  rmSync(dir, { recursive: true, force: true });
+});
+
+for (const bad of ['postion: [1, 0, 1]', 'published: false', 'permalink: /elsewhere/', 'place: {}']) {
+  test(`red team: the front matter key "${bad}" stops the build`, () => {
+    const dir = site({ 'index.md': page('Root'), 'shed/index.md': `---\ntitle: Shed\n${bad}\n---\n` });
+    const run = build(dir);
+    expect(run.status).not.toBe(0);
+    expect(run.output).toContain('packs/shed/index.md: unknown front matter key');
+    rmSync(dir, { recursive: true, force: true });
+  });
+}
+
+test('red team: the keys title, mood, position, size and layout build', () => {
+  const dir = site({
+    'index.md': page('Root'),
+    'shed/index.md': '---\ntitle: Shed\nmood: hearth\nposition: [4, 0, -4]\nsize: { ring: 3 }\nlayout: place\n---\n'
+  });
+  expect(build(dir).status).toBe(0);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('red team: the sign text keeps &, < and > as typed', () => {
+  const dir = site({ 'index.md': page('Root', 'Tom & Jerry <3 a > b "q" it\'s.') });
+  expect(build(dir).status).toBe(0);
+  expect(place(dir, '')).toBeTruthy();
+  const html = readFileSync(join(dir, 'out', 'index.html'), 'utf8');
+  const text = JSON.parse(html.match(/text: (".*"),\n/)[1]);
+  expect(text).toBe('Tom & Jerry <3 a > b “q” it’s.');
+  rmSync(dir, { recursive: true, force: true });
+});

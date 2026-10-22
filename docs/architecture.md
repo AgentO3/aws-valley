@@ -58,7 +58,7 @@ packs/**/index.md  ──_plugins/packs.rb──▶  page.place  ──Liquid js
 | `position` | `[x, y, z]` | no | arc layout | A fixed position in the parent, in metres. The engine ignores `y` |
 | `size` | `{ ring, walk_limit, exit }` | no | ring `max(14, 4 × children)`, walk limit ring + 12, exit 9 | The child ring radius, the walk limit and the exit distance, in metres |
 
-The Markdown body becomes the text on the sign in the place. The keys `type`, `biome` and `parent` are removed. The build ignores them and writes a warning.
+The Markdown body becomes the text on the sign in the place. The keys `type`, `biome` and `parent` are removed. The build ignores them and writes a warning. Any other key, except `layout`, stops the build. A `layout` that does not exist in `_layouts/` also stops the build.
 
 ### 4. `window.PLACE` shape
 
