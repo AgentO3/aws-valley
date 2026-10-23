@@ -143,3 +143,17 @@ test('E14: pack URLs include the base path', () => {
   expect(shed.parent.url).toBe('/aws-valley/');
   rmSync(dir, { recursive: true, force: true });
 });
+
+test('red team: a title that is not text stops the build, and a number title becomes text', () => {
+  for (const bad of ['true', '[a, b]', '{a: 1}']) {
+    const dir = site({ 'index.md': page('Root'), 'shed/index.md': page(bad) });
+    const run = build(dir);
+    expect(run.status, `title: ${bad}`).not.toBe(0);
+    expect(run.output).toContain('title must be text');
+    rmSync(dir, { recursive: true, force: true });
+  }
+  const dir = site({ 'index.md': page('Root'), 'shed/index.md': page('1984') });
+  expect(build(dir).status).toBe(0);
+  expect(place(dir, 'shed').title).toBe('1984');
+  rmSync(dir, { recursive: true, force: true });
+});

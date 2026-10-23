@@ -133,6 +133,9 @@ module Packs
       data = pack[:page].data
       title = data['title']
       Packs.fatal("#{pack[:dir]}/index.md has no title") if title.nil? || title.to_s.strip.empty?
+      # A boolean, list or map title reaches the 3D label and the page title as "true" or "[object Object]".
+      Packs.fatal("#{pack[:dir]}/index.md: title must be text") unless title.is_a?(String) || title.is_a?(Numeric)
+      data['title'] = title.to_s
       REMOVED_KEYS.each do |key|
         Jekyll.logger.warn('packs:', "#{pack[:dir]}/index.md: key \"#{key}\" was removed (ADR-001) and is ignored") if data.key?(key)
       end
