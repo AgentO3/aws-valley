@@ -143,3 +143,10 @@ test('E14: pack URLs include the base path', () => {
   expect(shed.parent.url).toBe('/aws-valley/');
   rmSync(dir, { recursive: true, force: true });
 });
+
+test('CI: each action in the workflow is pinned to a full commit SHA', () => {
+  const text = readFileSync(join(ROOT, '.github', 'workflows', 'ci.yml'), 'utf8');
+  const uses = [...text.matchAll(/^\s*(?:-\s+)?uses:\s*(\S+)/gm)].map((m) => m[1]);
+  expect(uses.length).toBeGreaterThan(0);
+  expect(uses.filter((u) => !/@[0-9a-f]{40}$/.test(u))).toEqual([]);
+});

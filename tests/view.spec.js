@@ -102,7 +102,7 @@ test('S6 / AC-4: the avatar fires the door, and the camera does not', async ({ p
       })
     );
   }, d);
-  await page.waitForTimeout(800);
+  await place.frames(4);
   const cam = await page.evaluate(() => window.__placeDebug.camera());
   expect(Math.hypot(cam.x - d.x, cam.z - d.z)).toBeLessThan(1.3);
   expect(page.url()).not.toContain('crystal-cave');
@@ -110,7 +110,7 @@ test('S6 / AC-4: the avatar fires the door, and the camera does not', async ({ p
   // Avatar 2 m from the door: no navigation. Then walk the avatar onto the door: navigation.
   const near = approach(d, 2);
   await page.evaluate((p) => window.__placeDebug.teleport(p.x, p.z), near);
-  await page.waitForTimeout(300);
+  await place.frames(4);
   expect(page.url()).not.toContain('crystal-cave');
   await page.evaluate((p) => window.__placeDebug.teleport(p.x, p.z), d);
   await expect(page).toHaveURL(/\/crystal-cave\/$/);
@@ -122,11 +122,11 @@ test('risk R7: a view change near a door does not fire the door', async ({ page 
   const d = await door(page, 'cozy-house');
   const near = approach(d, 1.6);
   await page.evaluate((p) => window.__placeDebug.teleport(p.x, p.z), near);
-  await page.waitForTimeout(200);
+  await place.frames(3);
   await page.keyboard.press('KeyV');
-  await page.waitForTimeout(300);
+  await place.frames(3);
   await page.keyboard.press('KeyV');
-  await page.waitForTimeout(500);
+  await place.frames(4);
   expect(page.url()).not.toContain('cozy-house');
   const body = await page.evaluate(() => window.__placeDebug.body());
   expect(Math.hypot(body.x - near.x, body.z - near.z)).toBeLessThan(0.3);

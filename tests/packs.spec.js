@@ -78,7 +78,7 @@ test.describe('BDR-011 place rules stay in their place', () => {
     const place = new Place(page);
     await place.open('vault/');
     await place.walkTo('vault/gold');
-    await page.waitForTimeout(1000);
+    await place.frames(4);
     await expect(page).toHaveURL(/\/vault\/$/);
     expect(await place.messages()).toContain('The door is locked');
     expect(await page.evaluate(() => window.__placeDebug.locked)).toEqual(['vault/gold']);
@@ -145,7 +145,7 @@ test.describe('BDR-012 broken pack stays contained', () => {
   test('risk R8 / E8: an async onEnter rejection is logged; onTick errors log one time', async ({ page }) => {
     const place = new Place(page);
     await place.open('broken/cracked/');
-    await page.waitForTimeout(1000);
+    await place.frames(4);
     const errors = await page.evaluate(() => window.__placeDebug.errors);
     expect(errors.filter((e) => e.phase === 'onEnter')).toHaveLength(1);
     expect(errors.filter((e) => e.phase === 'onTick')).toHaveLength(1);

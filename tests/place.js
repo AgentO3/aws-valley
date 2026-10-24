@@ -59,6 +59,20 @@ export class Place {
     });
   }
 
+  // Waits for the render loop to run n more frames. A negative check ("no door fired") must wait for
+  // frames and not for time, because headless SwiftShader renders at about 2 frames per second.
+  frames(n = 3) {
+    return this.page.evaluate(
+      (count) =>
+        new Promise((resolve) => {
+          let left = count;
+          const step = () => (--left <= 0 ? resolve() : requestAnimationFrame(step));
+          requestAnimationFrame(step);
+        }),
+      n
+    );
+  }
+
   data() {
     return this.page.evaluate(() => {
       const { placed, triggers } = window.__placeDebug;
