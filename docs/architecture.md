@@ -58,6 +58,8 @@ packs/**/index.md  ──_plugins/packs.rb──▶  page.place  ──Liquid js
 | `position` | `[x, y, z]` | no | arc layout | A fixed position in the parent, in metres. The engine ignores `y` |
 | `size` | `{ ring, walk_limit, exit }` | no | ring `max(14, 4 × children)`, walk limit ring + 12, exit 9 | The child ring radius, the walk limit and the exit distance, in metres |
 
+The build stops when a door, a ring or an exit is beyond the walk limit, or when two fixed door triggers overlap. The build also stops when a pack file looks like a module but has a wrong name (for example `Interior.js` or `interior.mjs`).
+
 The Markdown body becomes the text on the sign in the place. The keys `type`, `biome` and `parent` are removed. The build ignores them and writes a warning.
 
 ### 4. `window.PLACE` shape

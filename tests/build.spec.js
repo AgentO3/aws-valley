@@ -143,3 +143,91 @@ test('E14: pack URLs include the base path', () => {
   expect(shed.parent.url).toBe('/aws-valley/');
   rmSync(dir, { recursive: true, force: true });
 });
+
+// Red team, run 2026-10-25. Each pack set below built with exit 0 before the fix.
+const stops = (packs, message) => {
+  const dir = site(packs);
+  const run = build(dir);
+  expect(run.status).not.toBe(0);
+  expect(run.output).toContain(message);
+  rmSync(dir, { recursive: true, force: true });
+};
+
+test('red team: a walk limit below the default exit gives an exit that nobody can reach', () => {
+  stops(
+    { 'index.md': page('Root'), 'shed/index.md': '---\ntitle: Shed\nsize: { walk_limit: 3 }\n---\n' },
+    'packs/shed/index.md: the exit (9 m) is beyond the walk limit (3 m)'
+  );
+});
+
+test('red team: a walk limit below the default ring gives doors that nobody can reach', () => {
+  stops(
+    {
+      'index.md': '---\ntitle: Root\nsize: { walk_limit: 5 }\n---\n',
+      'shed/index.md': page('Shed')
+    },
+    'packs/index.md: the door ring (14 m) is beyond the walk limit (5 m)'
+  );
+});
+
+test('red team: a fixed door position beyond the walk limit of the parent stops the build', () => {
+  stops(
+    {
+      'index.md': '---\ntitle: Root\nsize: { ring: 3, walk_limit: 6 }\n---\n',
+      'shed/index.md': '---\ntitle: Shed\nposition: [40, 0, 0]\n---\n'
+    },
+    'packs/shed/index.md: position [40, 0, 0] is beyond the walk limit'
+  );
+});
+
+test('red team: two fixed doors whose triggers overlap stop the build', () => {
+  stops(
+    {
+      'index.md': page('Root'),
+      'a/index.md': '---\ntitle: A\nposition: [8, 0, -6]\n---\n',
+      'b/index.md': '---\ntitle: B\nposition: [9, 0, -6]\n---\n'
+    },
+    'a and b are less than 2.6 m apart'
+  );
+});
+
+test('red team: a fixed door on the exit point of a pack stops the build', () => {
+  stops(
+    {
+      'index.md': page('Root'),
+      'a/index.md': page('A'),
+      'a/b/index.md': '---\ntitle: B\nposition: [0, 0, 9]\n---\n'
+    },
+    'a/b and the exit are less than 2.6 m apart'
+  );
+});
+
+test('red team: a fixed door inside the walk limit and an exit inside it build without error', () => {
+  const dir = site({
+    'index.md': page('Root'),
+    'a/index.md': '---\ntitle: A\nposition: [8, 0, -6]\n---\n',
+    'a/b/index.md': '---\ntitle: B\nposition: [0, 0, -5]\n---\n'
+  });
+  expect(build(dir).status).toBe(0);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+for (const name of ['Interior.js', 'interior.mjs', 'EXTERIOR.JS', 'rules.mjs']) {
+  test(`red team: the file "${name}" looks like a pack module and stops the build`, () => {
+    stops(
+      { 'index.md': page('Root'), 'shed/index.md': page('Shed'), [`shed/${name}`]: 'export default () => ({});\n' },
+      `packs/shed/${name} looks like a pack module`
+    );
+  });
+}
+
+test('red team: a helper file with another name or in a subfolder is not a pack module', () => {
+  const dir = site({
+    'index.md': page('Root'),
+    'shed/index.md': page('Shed'),
+    'shed/interior-helpers.js': 'export const x = 1;\n',
+    'shed/lib/interior.js': 'export const y = 1;\n'
+  });
+  expect(build(dir).status).toBe(0);
+  rmSync(dir, { recursive: true, force: true });
+});
