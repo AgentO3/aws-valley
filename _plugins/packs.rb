@@ -13,6 +13,9 @@ module Packs
   MODULES = %w[exterior.js interior.js rules.js].freeze
   VIEW_SWITCHES = %w[key key-and-button url].freeze
   REMOVED_KEYS = %w[type biome parent].freeze
+  # A door sits a little inside its ring, and a trigger fires 1.3 m away (TRIGGER_RADIUS in engine.js).
+  REACH_SLACK = 2.0
+  TRIGGER_GAP = 2.6
 
   def self.fatal(message)
     raise Jekyll::Errors::FatalException, "packs: #{message}"
@@ -59,6 +62,7 @@ module Packs
       walk('', packs)
       packs.each_value { |pack| pack[:page] = PackPage.new(site, pack[:dir], pack[:permalink]) }
       packs.each_value { |pack| check_front_matter(pack) }
+      packs.each_value { |pack| check_layout(pack, packs) }
       packs.each_value do |pack|
         pack[:page].data['place'] = place_hash(pack, packs)
         site.pages << pack[:page]
@@ -123,10 +127,59 @@ module Packs
     end
 
     def add_file(pack, in_pack)
+      check_module_name(pack, in_pack)
       pack[:files] << in_pack
       source_dir = File.dirname(File.join(pack[:dir], in_pack))
       url = "#{pack[:permalink]}#{in_pack}"
       @site.static_files << PackFile.new(@site, source_dir, File.basename(in_pack), url)
+    end
+
+    # A file such as Interior.js or interior.mjs is never loaded, so the place would show an empty room
+    # with no error. Stop the build and name the file.
+    def check_module_name(pack, in_pack)
+      return if in_pack.include?('/') || MODULES.include?(in_pack)
+
+      stem = File.basename(in_pack, '.*').downcase
+      return unless MODULES.any? { |m| File.basename(m, '.js') == stem } && File.extname(in_pack) =~ /\A\.m?js\z/i
+
+      Packs.fatal("#{pack[:dir]}/#{in_pack} looks like a pack module, but only #{MODULES.join(', ')} are loaded")
+    end
+
+    # Same numbers as resolveSize() in engine.js. A door or an exit beyond the walk limit cannot be reached,
+    # and two trigger zones that overlap fire the wrong door.
+    def check_layout(pack, packs)
+      data = pack[:page].data
+      size = data['size'].is_a?(Hash) ? data['size'] : {}
+      num = ->(key) { size[key].is_a?(Numeric) && size[key].to_f.finite? ? size[key] : nil }
+      ring = num.call('ring') || [14, pack[:children].length * 4].max
+      limit = num.call('walk_limit') || ring + 12
+      where = "#{pack[:dir]}/index.md"
+
+      exit_at = num.call('exit') || 9
+      if pack[:parent] && exit_at > limit + REACH_SLACK
+        Packs.fatal("#{where}: the exit (#{exit_at} m) is beyond the walk limit (#{limit} m), so the visitor cannot reach it")
+      end
+
+      points = []
+      pack[:children].each do |id|
+        child = packs[id]
+        position = child[:page].data['position']
+        if position.is_a?(Array) && position.length >= 3 && position.values_at(0, 2).all? { |v| v.is_a?(Numeric) && v.to_f.finite? }
+          point = [position[0], position[2]]
+          if Math.hypot(*point) > limit + REACH_SLACK
+            Packs.fatal("#{child[:dir]}/index.md: position #{position.inspect} is beyond the walk limit of #{where} (#{limit} m), so the visitor cannot reach the door")
+          end
+          points << [id, point]
+        elsif ring > limit + REACH_SLACK
+          Packs.fatal("#{where}: the door ring (#{ring} m) is beyond the walk limit (#{limit} m), so the visitor cannot reach the doors")
+        end
+      end
+      points << ['the exit', [0, exit_at]] if pack[:parent]
+      points.combination(2) do |(a, pa), (b, pb)|
+        next unless Math.hypot(pa[0] - pb[0], pa[1] - pb[1]) < TRIGGER_GAP
+
+        Packs.fatal("#{where}: #{a} and #{b} are less than #{TRIGGER_GAP} m apart, so their door triggers overlap")
+      end
     end
 
     def check_front_matter(pack)
