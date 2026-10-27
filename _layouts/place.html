@@ -9,7 +9,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ page.title }} · {{ site.title }}</title>
   <link rel="icon" href="data:,">
-  <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+  <script>
+    // A place cannot run without A-Frame. If the script does not load, the visitor reads why, and does not wait at a black screen.
+    function loadFailed(name) {
+      function show() {
+        var box = document.getElementById('load-error');
+        if (!box) return;
+        box.textContent = 'This place did not load. The script "' + name + '" is blocked or the network is down. Check the connection and reload the page.';
+        box.classList.add('show');
+        document.getElementById('fade').classList.add('clear');
+      }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', show);
+      else show();
+    }
+  </script>
+  <script src="https://aframe.io/releases/1.7.0/aframe.min.js" onerror="loadFailed('A-Frame')"></script>
   <script src="https://cdn.jsdelivr.net/npm/meshoptimizer@0.22.0/meshopt_decoder.js"></script>
   <script>
     // Let three.js addon modules import 'three' and receive the copy of three.js inside A-Frame.
@@ -37,13 +51,19 @@
            font: 16px/1.4 system-ui, sans-serif; background: rgba(20, 12, 6, .7); padding: 6px 14px;
            border-radius: 6px; }
     #say:empty { display: none; }
+    #load-error { display: none; position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 20;
+                  max-width: 28em; box-sizing: border-box; padding: 16px 20px; color: #f2e2c8; background: #5a3b22;
+                  border: 1px solid #f2e2c8; border-radius: 6px; font: 16px/1.5 system-ui, sans-serif; }
+    #load-error.show { display: block; }
     #controls { position: fixed; right: 12px; top: 12px; z-index: 11; display: flex; gap: 8px; }
     #controls button { font: 14px/1.4 system-ui, sans-serif; color: #f2e2c8; background: #5a3b22;
                        border: 1px solid #f2e2c8; border-radius: 6px; padding: 6px 12px; cursor: pointer; }
   </style>
+  <noscript><style>#fade { display: none; } #load-error { display: block; }</style></noscript>
 </head>
 <body>
   <div id="fade"></div>
+  <div id="load-error" role="alert">This place needs JavaScript. Turn it on and reload the page.</div>
   {%- assign view_switch = site.view_switch | default: "key" %}
   <div id="hud">{{ page.title }} · WASD to move · click to look{% if view_switch == "key" or view_switch == "key-and-button" %} · V to switch view{% endif %}</div>
   <div id="say" role="status" aria-live="polite"></div>

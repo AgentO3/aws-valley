@@ -10,7 +10,12 @@ const LIVE_URL = process.env.LIVE_URL;
 //   button   _site-button/   production packs, view_switch: key-and-button
 //   url      _site-url/      production packs, view_switch: url
 const SITES = [
-  { name: 'prod', dir: '_site', port: 4100, testMatch: ['smoke.spec.js', 'view.spec.js', 'build.spec.js'] },
+  {
+    name: 'prod',
+    dir: '_site',
+    port: 4100,
+    testMatch: ['smoke.spec.js', 'view.spec.js', 'build.spec.js', 'load-failure.spec.js', 'lint-packs.spec.js']
+  },
   { name: 'fixture', dir: '_site-fixture', port: 4101, testMatch: ['packs.spec.js'] },
   { name: 'button', dir: '_site-button', port: 4102, testMatch: ['view-button.spec.js'] },
   { name: 'url', dir: '_site-url', port: 4103, testMatch: ['view-url.spec.js'] }
