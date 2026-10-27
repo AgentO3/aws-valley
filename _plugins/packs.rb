@@ -43,6 +43,15 @@ module Packs
     end
   end
 
+  # The normal Jekyll reader must skip the pack folder, because Generator makes its pages and files.
+  # The folder is not in `exclude` of _config.yml. The file watcher of `jekyll build --watch` and
+  # `jekyll serve` reads that list and ignores every path in it, so a pack edit would give no rebuild.
+  # The site has its own copy of the config, so the exclusion here does not reach the watcher.
+  Jekyll::Hooks.register :site, :after_init do |site|
+    folder = (site.config['packs_dir'] || 'packs').to_s.chomp('/')
+    site.exclude |= [folder]
+  end
+
   class Generator < Jekyll::Generator
     safe true
     priority :highest

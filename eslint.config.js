@@ -2,7 +2,25 @@ import js from '@eslint/js';
 import globals from 'globals';
 
 // Pack modules use only ctx and their imports ('three', 'cozy/kit.js'), not globals (stack ADR-001, NFR-8).
-const PACK_GLOBALS = ['window', 'document', 'localStorage', 'sessionStorage', 'THREE', 'AFRAME'].map((name) => ({
+// globalThis, self, top, parent and frames reach the same objects as window. fetch, location and XMLHttpRequest
+// let a pack leave the folder of its place or call another host.
+const PACK_GLOBALS = [
+  'window',
+  'document',
+  'localStorage',
+  'sessionStorage',
+  'THREE',
+  'AFRAME',
+  'globalThis',
+  'self',
+  'top',
+  'parent',
+  'frames',
+  'fetch',
+  'location',
+  'history',
+  'XMLHttpRequest'
+].map((name) => ({
   name,
   message: 'A pack uses ctx and its imports, not globals (ADR-001).'
 }));

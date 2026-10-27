@@ -1,6 +1,6 @@
 // Build tests for _plugins/packs.rb (BDR-009, ADR-001). These tests run Jekyll on small temporary
 // sites and read the output files. They need no browser.
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -142,4 +142,30 @@ test('E14: pack URLs include the base path', () => {
   expect(shed.base).toBe('/aws-valley/shed/');
   expect(shed.parent.url).toBe('/aws-valley/');
   rmSync(dir, { recursive: true, force: true });
+});
+
+test('dev: `jekyll build --watch` rebuilds after an edit in packs/', async () => {
+  // `jekyll serve` has the same watcher. The watcher ignores each path in `exclude`, so a pack folder
+  // in `exclude` gives no rebuild, and the author must restart the server after each pack edit.
+  const dir = site({ 'index.md': page('Root'), 'shed/index.md': page('Shed', 'Version one.') });
+  const child = spawn(
+    'bundle',
+    ['exec', 'jekyll', 'build', '--watch', '--strict_front_matter', '-s', dir, '-d', join(dir, 'out')],
+    { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] }
+  );
+  let log = '';
+  child.stdout.on('data', (chunk) => (log += chunk));
+  child.stderr.on('data', (chunk) => (log += chunk));
+  try {
+    await expect.poll(() => log, { timeout: 30_000 }).toContain('Auto-regeneration: enabled');
+    writeFileSync(join(dir, 'packs', 'shed', 'index.md'), page('Shed', 'Version two.'));
+    const shed = () => {
+      const file = join(dir, 'out', 'shed', 'index.html');
+      return existsSync(file) ? readFileSync(file, 'utf8') : '';
+    };
+    await expect.poll(shed, { timeout: 30_000 }).toContain('Version two.');
+  } finally {
+    child.kill();
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

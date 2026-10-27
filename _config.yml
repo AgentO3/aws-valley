@@ -5,7 +5,8 @@ description: A walkable world. Each page is a place.
 view_switch: key
 
 # Each folder in packs/ with an index.md is one place (stack ADR-001). _plugins/packs.rb makes the pages
-# and copies the pack files, so the normal Jekyll reader skips packs/ (see exclude).
+# and copies the pack files. The plugin adds packs_dir to the exclude list of the site, so the normal Jekyll
+# reader skips it. Do not list packs here: `jekyll serve` would not watch the pack files then.
 packs_dir: packs
 
 # An unknown filter or a Liquid syntax error stops the build (platform/jekyll rule 3).
@@ -14,7 +15,6 @@ liquid:
   strict_filters: true
 
 exclude:
-  - packs
   - README.md
   - .sdlc
   - docs
