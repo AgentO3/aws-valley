@@ -143,3 +143,48 @@ test('E14: pack URLs include the base path', () => {
   expect(shed.parent.url).toBe('/aws-valley/');
   rmSync(dir, { recursive: true, force: true });
 });
+
+// Front matter types. The engine reads mood, position and size without a check, so a wrong value
+// must stop the build and name the pack (PROMPT.md red team, front matter).
+const BAD_FRONT_MATTER = [
+  ['mood: sunset', 'unknown mood "sunset"'],
+  ['mood: constructor', 'unknown mood "constructor"'],
+  ['mood: [golden]', 'unknown mood ["golden"]'],
+  ['position: foo', 'position "foo" must be a list of 3 numbers'],
+  ['position: [1, 2]', 'position [1, 2] must be a list of 3 numbers'],
+  ['position: [1, 0, abc]', 'must be a list of 3 numbers'],
+  ['size: big', 'size must be a mapping'],
+  ['size: { rign: 5 }', 'unknown size key "rign"'],
+  ['size: { ring: "5" }', 'size.ring ("5") must be a number above 0'],
+  ['size: { walk_limit: -3 }', 'size.walk_limit (-3) must be a number above 0']
+];
+
+for (const [line, message] of BAD_FRONT_MATTER) {
+  test(`front matter "${line}" stops the build and names the pack`, () => {
+    const dir = site({ 'index.md': page('Root'), 'shed/index.md': `---\ntitle: Shed\n${line}\n---\n` });
+    const run = build(dir);
+    expect(run.status).not.toBe(0);
+    expect(run.output).toContain('packs/shed/index.md');
+    expect(run.output).toContain(message);
+    rmSync(dir, { recursive: true, force: true });
+  });
+}
+
+test('front matter: a valid mood name, position and size build', () => {
+  const dir = site({
+    'index.md': page('Root'),
+    'shed/index.md':
+      '---\ntitle: Shed\nmood: grotto\nposition: [4, 0, -6]\nsize: { ring: 5, walk_limit: 9, exit: 4 }\n---\n'
+  });
+  expect(build(dir).status).toBe(0);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('front matter: the mood names of the build agree with MOODS in engine.js', () => {
+  const engine = readFileSync(join(ROOT, 'assets', 'js', 'engine.js'), 'utf8');
+  const block = engine.match(/const MOODS = \{([\s\S]*?)\n\};/)[1];
+  const names = [...block.matchAll(/^ {2}(\w+): \{/gm)].map((m) => m[1]);
+  const plugin = readFileSync(join(ROOT, '_plugins', 'packs.rb'), 'utf8');
+  const listed = plugin.match(/MOOD_NAMES = %w\[(.*?)\]/)[1].split(' ');
+  expect(listed.sort()).toEqual(names.sort());
+});
