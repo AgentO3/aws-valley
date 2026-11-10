@@ -13,6 +13,9 @@ module Packs
   MODULES = %w[exterior.js interior.js rules.js].freeze
   VIEW_SWITCHES = %w[key key-and-button url].freeze
   REMOVED_KEYS = %w[type biome parent].freeze
+  # The names in MOODS of assets/js/engine.js. tests/build.spec.js checks that the two lists agree.
+  MOOD_NAMES = %w[golden moonlight hearth grotto].freeze
+  SIZE_KEYS = %w[ring walk_limit exit].freeze
 
   def self.fatal(message)
     raise Jekyll::Errors::FatalException, "packs: #{message}"
@@ -135,6 +138,36 @@ module Packs
       Packs.fatal("#{pack[:dir]}/index.md has no title") if title.nil? || title.to_s.strip.empty?
       REMOVED_KEYS.each do |key|
         Jekyll.logger.warn('packs:', "#{pack[:dir]}/index.md: key \"#{key}\" was removed (ADR-001) and is ignored") if data.key?(key)
+      end
+      check_mood_name(pack, data)
+      check_position(pack, data['position'])
+      check_size_values(pack, data['size'])
+    end
+
+    def check_mood_name(pack, data)
+      mood = data['mood']
+      return if mood.nil? || mood.is_a?(Hash) || (mood.is_a?(String) && MOOD_NAMES.include?(mood))
+
+      Packs.fatal("#{pack[:dir]}/index.md: unknown mood #{mood.inspect} (use #{MOOD_NAMES.join(', ')} or a mapping)")
+    end
+
+    # The engine reads x from position[0] and z from position[2].
+    def check_position(pack, position)
+      return if position.nil?
+      return if position.is_a?(Array) && position.length == 3 && position.all? { |v| v.is_a?(Numeric) && v.to_f.finite? }
+
+      Packs.fatal("#{pack[:dir]}/index.md: position #{position.inspect} must be a list of 3 numbers [x, y, z]")
+    end
+
+    def check_size_values(pack, size)
+      return if size.nil?
+
+      Packs.fatal("#{pack[:dir]}/index.md: size must be a mapping, not #{size.inspect}") unless size.is_a?(Hash)
+      size.each do |key, value|
+        Packs.fatal("#{pack[:dir]}/index.md: unknown size key #{key.inspect} (use #{SIZE_KEYS.join(', ')})") unless SIZE_KEYS.include?(key)
+        next if value.is_a?(Numeric) && value.to_f.finite? && value.positive?
+
+        Packs.fatal("#{pack[:dir]}/index.md: size.#{key} (#{value.inspect}) must be a number above 0")
       end
     end
 
